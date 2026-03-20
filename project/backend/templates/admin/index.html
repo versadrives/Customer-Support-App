@@ -1,0 +1,73 @@
+{% extends "admin/index.html" %}
+{% load i18n %}
+
+{% block content %}
+  <div class="dashboard-module" style="margin-bottom: 24px;">
+    <h2 style="margin-bottom: 8px;">Operations Snapshot</h2>
+    <p style="color: #6b7280; margin-top: 0;">Live ticket stats and quick actions.</p>
+
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 12px 0 18px;">
+      <div style="padding: 12px; border: 1px solid #e5e7eb; border-radius: 12px;">
+        <strong>Open</strong>
+        <div style="font-size: 22px; margin-top: 6px;">{{ stats.open }}</div>
+      </div>
+      <div style="padding: 12px; border: 1px solid #e5e7eb; border-radius: 12px;">
+        <strong>Assigned</strong>
+        <div style="font-size: 22px; margin-top: 6px;">{{ stats.assigned }}</div>
+      </div>
+      <div style="padding: 12px; border: 1px solid #e5e7eb; border-radius: 12px;">
+        <strong>In Progress</strong>
+        <div style="font-size: 22px; margin-top: 6px;">{{ stats.in_progress }}</div>
+      </div>
+      <div style="padding: 12px; border: 1px solid #e5e7eb; border-radius: 12px;">
+        <strong>Completed</strong>
+        <div style="font-size: 22px; margin-top: 6px;">{{ stats.completed }}</div>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px;">
+      <div style="padding: 12px; border: 1px solid #e5e7eb; border-radius: 12px;">
+        <strong>Total Tickets</strong>
+        <div style="font-size: 20px; margin-top: 6px;">{{ stats.total }}</div>
+      </div>
+      <div style="padding: 12px; border: 1px solid #e5e7eb; border-radius: 12px;">
+        <strong>Engineers</strong>
+        <div style="font-size: 20px; margin-top: 6px;">{{ stats.engineers }}</div>
+      </div>
+      <div style="padding: 12px; border: 1px solid #e5e7eb; border-radius: 12px;">
+        <strong>Customers</strong>
+        <div style="font-size: 20px; margin-top: 6px;">{{ stats.customers }}</div>
+      </div>
+      <div style="padding: 12px; border: 1px solid #e5e7eb; border-radius: 12px;">
+        <strong>Reports</strong>
+        <div style="font-size: 20px; margin-top: 6px;">{{ stats.reports }}</div>
+      </div>
+    </div>
+
+    <h3 style="margin: 16px 0 8px;">Quick Links</h3>
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+      {% for link in quick_links %}
+        <a class="button" href="{{ link.url }}" style="text-decoration: none; padding: 8px 12px; border-radius: 8px; background: #0a7e8c; color: white;">{{ link.label }}</a>
+      {% endfor %}
+    </div>
+
+    <h3 style="margin: 18px 0 8px;">Recent Tickets</h3>
+    <div style="border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px;">
+      {% if recent_tickets %}
+        <ul style="margin: 0; padding-left: 16px;">
+          {% for t in recent_tickets %}
+            <li style="margin-bottom: 6px;">
+              <strong>{{ t.ticket_id }}</strong> — {{ t.customer.name }} ({{ t.status }})
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p style="margin: 0; color: #6b7280;">No tickets yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  {{ block.super }}
+{% endblock %}
+
+{% block sidebar %}{% endblock %}
