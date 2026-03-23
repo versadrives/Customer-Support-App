@@ -10,7 +10,6 @@ router.register(r'tickets', TicketViewSet, basename='ticket')
 router.register(r'reports', ReportViewSet, basename='report')
 
 urlpatterns = [
-    path('panel/', include('panel_urls', namespace='panel')),
     path('', include(router.urls)),
     path('me/', me),
     path('change-password/', change_password),
