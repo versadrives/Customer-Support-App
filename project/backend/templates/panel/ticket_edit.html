@@ -1,0 +1,71 @@
+{% extends "panel/base.html" %}
+{% load form_tags %}
+
+{% block content %}
+<div class="card" style="max-width: 1000px; margin: 0 auto;">
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;">
+    <h1 style="margin: 0; font-size: 28px; font-weight: 700; color: var(--ink);">Edit Ticket {{ ticket.ticket_id }}</h1>
+    <a class="btn" href="{% url 'panel:tickets' %}">← Back to Tickets</a>
+  </div>
+  
+  <form method="post" novalidate>
+    {% csrf_token %}
+    
+    {% if form.errors %}
+    <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
+      <strong style="color: #dc2626;">Please fix the errors:</strong>
+      {{ form.non_field_errors }}
+      {% for field in form %}
+        {% for error in field.errors %}
+          <div style="color: #dc2626; font-size: 14px;">{{ field.label }}: {{ error }}</div>
+        {% endfor %}
+      {% endfor %}
+    </div>
+    {% endif %}
+    
+    <div class="grid cols-3" style="gap: 20px;">
+      <div>
+        <label style="display: block; font-weight: 600; margin-bottom: 6px; color: var(--ink);">Status *</label>
+        {{ form.status|add_class:"form-input" }}
+        {% if form.status.errors %}{{ form.status.errors }}{% endif %}
+      </div>
+      
+      <div>
+        <label style="display: block; font-weight: 600; margin-bottom: 6px; color: var(--ink);">Assigned Engineer</label>
+        {{ form.assigned_engineer|add_class:"form-input" }}
+        {% if form.assigned_engineer.errors %}{{ form.assigned_engineer.errors }}{% endif %}
+      </div>
+    </div>
+    
+    <div style="margin-top: 32px; display: flex; gap: 12px; justify-content: flex-end;">
+      <a class="btn" href="{% url 'panel:tickets' %}">Cancel</a>
+      <button class="btn primary" type="submit" style="padding: 12px 24px; font-weight: 600;">Save Changes</button>
+    </div>
+  </form>
+</div>
+
+<style>
+.form-input, select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  font-size: 15px;
+  background: var(--surface);
+  transition: all 0.2s;
+}
+.form-input:focus, select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(14, 97, 165, 0.1);
+}
+.grid.cols-3 { gap: 20px; }
+@media (max-width: 980px) {
+  .grid.cols-3 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+  .grid.cols-3 { grid-template-columns: 1fr; }
+}
+</style>
+
+{% endblock %}
