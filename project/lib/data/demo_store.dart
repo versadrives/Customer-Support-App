@@ -58,3 +58,4 @@ class DemoStore {
 
   static int countByStatus(TicketStatus s) => tickets.where((t) => t.status == s).length;
 }
+

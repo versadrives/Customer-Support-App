@@ -8,7 +8,7 @@ class SupportApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const seed = Color(0xFF0F766E);
+    const seed = Color(0xFF0E61A5);
     final baseText = GoogleFonts.soraTextTheme();
     return MaterialApp(
       debugShowCheckedModeBanner: false,
@@ -50,9 +50,9 @@ class SupportApp extends StatelessWidget {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
         ),
         dataTableTheme: DataTableThemeData(
-          headingRowColor: WidgetStateProperty.all(const Color(0xFFE2F1EE)),
+          headingRowColor: WidgetStateProperty.all(const Color(0xFFE6EEF7)),
           dataRowColor: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.selected)) return const Color(0xFFDFF5F2);
+            if (states.contains(WidgetState.selected)) return const Color(0xFFDDE9F5);
             return null;
           }),
           headingTextStyle: baseText.labelLarge?.copyWith(fontWeight: FontWeight.w700),
@@ -64,3 +64,4 @@ class SupportApp extends StatelessWidget {
     );
   }
 }
+

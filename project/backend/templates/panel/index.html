@@ -1,0 +1,79 @@
+{% extends "panel/base.html" %}
+
+{% block content %}
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="stat-label">Assigned</div>
+      <div class="stat-value">{{ stats.assigned }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">In Progress</div>
+      <div class="stat-value">{{ stats.in_progress }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Completed</div>
+      <div class="stat-value">{{ stats.completed }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total Tickets</div>
+      <div class="stat-value">{{ stats.total }}</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:18px;">
+    <div class="section-header">
+      <strong>Quick Actions</strong>
+      <a class="btn primary" href="/panel/tickets/new/">Create Ticket</a>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
+      <a class="btn" href="/panel/tickets/">Manage Tickets</a>
+      <a class="btn" href="/panel/engineers/">Engineers</a>
+      <a class="btn" href="/panel/reports/">Reports</a>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:18px;">
+    <div class="section-header">
+      <strong>Recent Tickets</strong>
+      <a class="btn" href="/panel/tickets/">View all</a>
+    </div>
+    <div style="margin-top:10px;">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Ticket</th>
+            <th>Customer</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in recent_tickets %}
+            <tr>
+              <td>{{ t.ticket_id }}</td>
+              <td>{{ t.customer.name|capfirst }}</td>
+              <td>
+                {% if t.status == "OPEN" %}
+                  <span class="pill open">Open</span>
+                {% elif t.status == "ASSIGNED" %}
+                  <span class="pill assigned">Assigned</span>
+                {% elif t.status == "IN_PROGRESS" %}
+                  <span class="pill in-progress">In Progress</span>
+                {% elif t.status == "COMPLETED" %}
+                  <span class="pill completed">Completed</span>
+                {% else %}
+                  <span class="pill">{{ t.status }}</span>
+                {% endif %}
+              </td>
+              <td>{{ t.created_at|date:"Y-m-d H:i" }}</td>
+              <td><a class="btn" href="/panel/tickets/{{ t.id }}/edit/">Update</a></td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5" class="muted">No tickets yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}

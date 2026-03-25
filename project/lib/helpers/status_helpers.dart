@@ -11,7 +11,7 @@ Color statusColor(TicketStatus status) {
     case TicketStatus.inProgress:
       return const Color(0xFF118AB2);
     case TicketStatus.completed:
-      return const Color(0xFF2A9D8F);
+      return const Color(0xFF0E61A5);
   }
 }
 
@@ -27,3 +27,4 @@ String statusLabel(TicketStatus status) {
       return 'COMPLETED';
   }
 }
+

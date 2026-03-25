@@ -33,10 +33,10 @@ class Panel extends StatelessWidget {
                 width: 34,
                 height: 34,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE6F4F1),
+                  color: const Color(0xFFE6EEF7),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, size: 18, color: const Color(0xFF0F766E)),
+                child: Icon(icon, size: 18, color: const Color(0xFF0E61A5)),
               ),
               const SizedBox(width: 8),
               Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
@@ -49,3 +49,4 @@ class Panel extends StatelessWidget {
     );
   }
 }
+

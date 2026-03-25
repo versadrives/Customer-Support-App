@@ -42,7 +42,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                       padding: const EdgeInsets.only(top: 8),
                       child: Column(
                         children: const [
-                          Icon(Icons.support_agent, size: 28),
+                          Icon(Icons.engineering, size: 28),
                           SizedBox(height: 6),
                           Text('Admin', style: TextStyle(fontWeight: FontWeight.w700)),
                         ],
@@ -101,3 +101,4 @@ class _AdminTab {
   final IconData icon;
   final Widget widget;
 }
+

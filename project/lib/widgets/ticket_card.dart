@@ -30,3 +30,4 @@ class TicketCard extends StatelessWidget {
     );
   }
 }
+

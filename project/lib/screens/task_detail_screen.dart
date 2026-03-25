@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api/api_client.dart';
 import '../api/auth_store.dart';
 import '../models.dart';
+import '../screens/qr_scan_screen.dart';
 import '../widgets/panel.dart';
 import '../widgets/status_pill.dart';
 
@@ -61,7 +62,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         _serialNumber.text.trim().isEmpty ||
         _problemIdentified.text.trim().isEmpty ||
         _action.text.trim().isEmpty ||
-        _pcbBoardNumber.text.trim().isEmpty ||
         _comments.text.trim().isEmpty ||
         _chargesCollected.text.trim().isEmpty ||
         _kmsDriven.text.trim().isEmpty) {
@@ -97,6 +97,15 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to submit report. $e')));
     }
+  }
+
+  Future<void> _scanInto(TextEditingController controller, {required String title}) async {
+    final value = await Navigator.of(context).push<String>(
+      MaterialPageRoute(builder: (_) => QrScanScreen(title: title)),
+    );
+    if (!mounted || value == null || value.trim().isEmpty) return;
+    controller.text = value.trim();
+    setState(() {});
   }
 
   @override
@@ -162,7 +171,17 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                     Expanded(
                       child: TextField(
                         controller: _serialNumber,
-                        decoration: const InputDecoration(labelText: 'Serial number'),
+                        readOnly: true,
+                        decoration: InputDecoration(
+                          labelText: 'Serial number',
+                          helperText: 'Scan required',
+                          suffixIcon: IconButton(
+                            tooltip: 'Scan serial number',
+                            icon: const Icon(Icons.qr_code_scanner),
+                            onPressed: () => _scanInto(_serialNumber, title: 'Scan Serial Number'),
+                          ),
+                        ),
+                        onTap: () => _scanInto(_serialNumber, title: 'Scan Serial Number'),
                       ),
                     ),
                   ],
@@ -175,7 +194,18 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                   decoration: const InputDecoration(labelText: 'Action taken'),
                 ),
                 const SizedBox(height: 8),
-                TextField(controller: _pcbBoardNumber, decoration: const InputDecoration(labelText: 'PCB board number')),
+                TextField(
+                  controller: _pcbBoardNumber,
+                  decoration: InputDecoration(
+                    labelText: 'PCB board number',
+                    helperText: 'Optional',
+                    suffixIcon: IconButton(
+                      tooltip: 'Scan PCB barcode',
+                      icon: const Icon(Icons.qr_code_scanner),
+                      onPressed: () => _scanInto(_pcbBoardNumber, title: 'Scan PCB Barcode (Optional)'),
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 8),
                 TextField(controller: _comments, decoration: const InputDecoration(labelText: 'Comments')),
                 const SizedBox(height: 8),
@@ -228,3 +258,4 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     );
   }
 }
+

@@ -3,6 +3,7 @@ from django.contrib import admin
 from django.contrib.auth.models import User
 from django.http import HttpResponse
 from django.core.exceptions import ValidationError
+import csv
 
 from .admin_site import admin_site
 from .models import AdminProfile, Customer, EngineerProfile, Report, Ticket
@@ -64,6 +65,64 @@ def export_reports_pdf(modeladmin, request, queryset):
 
 
 export_reports_pdf.short_description = 'Export selected reports as PDF'
+
+
+def export_reports_csv(modeladmin, request, queryset):
+    response = HttpResponse(content_type="text/csv")
+    response["Content-Disposition"] = 'attachment; filename="service_reports.csv"'
+    writer = csv.writer(response)
+    writer.writerow([
+        "Ticket ID",
+        "Engineer",
+        "Customer",
+        "Location",
+        "Status",
+        "Ticket Created",
+        "Ticket Started",
+        "Ticket Completed",
+        "Report Created",
+        "Service Provider Code",
+        "Number Of Fans",
+        "Serial Number",
+        "Problem Identified",
+        "Action Taken",
+        "PCB Board Number",
+        "Comments",
+        "Charges Collected",
+        "KMs Driven",
+        "Customer Polite",
+        "Difficult To Attend",
+    ])
+    for report in queryset.select_related('ticket', 'engineer', 'engineer__user', 'ticket__customer'):
+        ticket = report.ticket
+        engineer_user = report.engineer.user if report.engineer else None
+        customer = ticket.customer if ticket else None
+        writer.writerow([
+            ticket.ticket_id if ticket else '',
+            engineer_user.username if engineer_user else '',
+            customer.name if customer else '',
+            ticket.location if ticket else '',
+            ticket.status if ticket else '',
+            ticket.created_at if ticket else '',
+            ticket.started_at if ticket else '',
+            ticket.completed_at if ticket else '',
+            report.created_at,
+            report.service_provider_code,
+            report.number_of_fans,
+            report.serial_number,
+            report.problem_identified,
+            report.action_taken,
+            report.pcb_board_number,
+            report.comments,
+            report.charges_collected,
+            report.kms_driven,
+            "Yes" if report.is_customer_polite else "No",
+            "Yes" if report.difficult_to_attend else "No",
+        ])
+    return response
+
+
+export_reports_csv.short_description = 'Export selected reports as CSV'
 
 
 class AdminProfileForm(forms.ModelForm):
@@ -210,7 +269,8 @@ class TicketAdmin(admin.ModelAdmin):
     form = TicketAdminForm
     list_display = ('ticket_id', 'customer', 'model', 'serial_number', 'mfg_date', 'status', 'assigned_engineer', 'created_by', 'created_at')
     search_fields = ('ticket_id', 'customer__name', 'assigned_engineer__user__username')
-    list_filter = ('status', 'created_at')
+    list_filter = ('status', 'assigned_engineer', 'customer', 'created_at')
+    date_hierarchy = 'created_at'
     readonly_fields = ('created_at', 'started_at', 'completed_at', 'qr_code')
     fields = (
         'ticket_id',
@@ -230,8 +290,9 @@ class TicketAdmin(admin.ModelAdmin):
 class ReportAdmin(admin.ModelAdmin):
     list_display = ('ticket', 'engineer', 'ticket_created_at', 'ticket_started_at', 'ticket_completed_at')
     search_fields = ('ticket__ticket_id', 'engineer__user__username')
-    list_filter = ()
-    actions = [export_reports_pdf]
+    list_filter = ('ticket__status', 'engineer', 'created_at', 'ticket__created_at')
+    date_hierarchy = 'created_at'
+    actions = [export_reports_pdf, export_reports_csv]
 
     def ticket_created_at(self, obj):
         return obj.ticket.created_at

@@ -240,7 +240,7 @@ class _MasterDataTabState extends State<MasterDataTab> {
                       children: [
                         IconButton(icon: const Icon(Icons.edit), tooltip: 'Edit', onPressed: () => _editEngineer(e)),
                         IconButton(
-                          icon: Icon(e.active ? Icons.block : Icons.check_circle, color: e.active ? Colors.red : Colors.green),
+                          icon: Icon(e.active ? Icons.block : Icons.check_circle, color: e.active ? Colors.red : const Color(0xFF0E61A5)),
                           tooltip: e.active ? 'Deactivate' : 'Activate',
                           onPressed: () => _toggleActive(e),
                         ),
@@ -256,3 +256,4 @@ class _MasterDataTabState extends State<MasterDataTab> {
     );
   }
 }
+

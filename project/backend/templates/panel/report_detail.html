@@ -1,0 +1,30 @@
+{% extends "panel/base.html" %}
+
+{% block content %}
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <strong>Report {{ report.ticket.ticket_id }}</strong>
+      <a class="btn" href="/panel/reports/">Back</a>
+    </div>
+    <div style="margin-top:12px;">
+      <table class="table">
+        <tbody>
+          <tr><th>Log Date</th><td>{{ report.created_at|date:"Y-m-d H:i" }}</td></tr>
+          <tr><th>Ticket No</th><td>{{ report.ticket.ticket_id }}</td></tr>
+          <tr><th>Attended By</th><td>{{ report.engineer.user.username }}</td></tr>
+          <tr><th>Service Provider Code</th><td>{{ report.service_provider_code }}</td></tr>
+          <tr><th>No. of Fans</th><td>{{ report.number_of_fans }}</td></tr>
+          <tr><th>Serial Number</th><td>{{ report.serial_number }}</td></tr>
+          <tr><th>Problem Identified</th><td>{{ report.problem_identified|capfirst }}</td></tr>
+          <tr><th>Action Taken</th><td>{{ report.action_taken|capfirst }}</td></tr>
+          <tr><th>PCB Board Number</th><td>{{ report.pcb_board_number }}</td></tr>
+          <tr><th>Comments</th><td>{{ report.comments|capfirst }}</td></tr>
+          <tr><th>Charges Collected</th><td>{{ report.charges_collected }}</td></tr>
+          <tr><th>KM's Driven</th><td>{{ report.kms_driven }}</td></tr>
+          <tr><th>Customer Polite</th><td>{% if report.is_customer_polite %}Yes{% else %}No{% endif %}</td></tr>
+          <tr><th>Difficult To Attend</th><td>{% if report.difficult_to_attend %}Yes{% else %}No{% endif %}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}

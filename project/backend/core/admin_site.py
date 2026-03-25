@@ -7,8 +7,8 @@ from .models import Customer, EngineerProfile, Report, Ticket, TicketStatus
 
 
 class SupportAdminSite(AdminSite):
-    site_header = 'Customer Support Admin'
-    site_title = 'Customer Support Admin'
+    site_header = 'Admin'
+    site_title = 'Admin'
     index_title = 'Operations Dashboard'
 
     def index(self, request, extra_context=None):

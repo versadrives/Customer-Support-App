@@ -53,7 +53,7 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
           final assignedCount = tickets.where((t) => t.status == TicketStatus.assigned).length;
           final inProgressCount = tickets.where((t) => t.status == TicketStatus.inProgress).length;
           final completedCount = tickets.where((t) => t.status == TicketStatus.completed).length;
-          final total = tickets.length == 0 ? 1 : tickets.length;
+          final total = tickets.isEmpty ? 1 : tickets.length;
           final openPct = openCount / total;
           final assignedPct = assignedCount / total;
           final inProgressPct = inProgressCount / total;
@@ -115,7 +115,7 @@ class _StatusChart extends StatelessWidget {
         children: [
           Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
           const SizedBox(height: 12),
-          ...rows.map((r) => _StatusBarRow(row: r)).toList(),
+          ...rows.map((r) => _StatusBarRow(row: r)),
         ],
       ),
     );

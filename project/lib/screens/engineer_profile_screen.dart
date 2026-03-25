@@ -86,8 +86,8 @@ class _EngineerProfileScreenState extends State<EngineerProfileScreen> {
                 children: [
                   CircleAvatar(
                     radius: 22,
-                    backgroundColor: const Color(0xFFE6F4F1),
-                    child: const Icon(Icons.person, color: Color(0xFF0F766E)),
+                    backgroundColor: const Color(0xFFE6EEF7),
+                    child: const Icon(Icons.person, color: Color(0xFF0E61A5)),
                   ),
                   const SizedBox(width: 12),
                   Column(
@@ -151,3 +151,4 @@ class _EngineerProfileScreenState extends State<EngineerProfileScreen> {
     );
   }
 }
+

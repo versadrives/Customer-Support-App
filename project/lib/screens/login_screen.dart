@@ -54,7 +54,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: const BoxDecoration(
-        gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFFE6F7F4), Color(0xFFF2F7F9), Color(0xFFF8FAFF)]),
+        gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFFE6EEF7), Color(0xFFF0F6FB), Color(0xFFF7FAFF)]),
       ),
       child: Scaffold(
         backgroundColor: Colors.transparent,
@@ -69,7 +69,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   height: 220,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: const LinearGradient(colors: [Color(0xFF0EA5A4), Color(0xFF34D399)]),
+                    gradient: const LinearGradient(colors: [Color.fromARGB(255, 14, 97, 165), Color.fromARGB(255, 76, 143, 208)]),
                   ),
                 ),
               ),
@@ -81,7 +81,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   height: 180,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: const LinearGradient(colors: [Color(0xFF14B8A6), Color(0xFF38BDF8)]),
+                    gradient: const LinearGradient(colors: [Color.fromARGB(255, 159, 219, 48), Color.fromARGB(255, 159, 219, 48)]),
                   ),
                 ),
               ),
@@ -96,22 +96,23 @@ class _LoginScreenState extends State<LoginScreen> {
                           width: 86,
                           height: 86,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF0F766E),
+                            color: const Color.fromARGB(255, 14, 97, 165),
                             borderRadius: BorderRadius.circular(28),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF0F766E).withValues(alpha: 0.32),
+                                color: const Color.fromARGB(255, 14, 97, 165).withValues(alpha: 0.32),
                                 blurRadius: 28,
                                 offset: const Offset(0, 12),
                               )
                             ],
                           ),
-                          child: const Icon(Icons.support_agent, color: Colors.white, size: 44),
+                          child: const Icon(Icons.engineering, color: Colors.white, size: 44),
                         ),
                         const SizedBox(height: 16),
-                        const Text('Customer Support', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w700)),
+                        const Text('Superfan', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w700)),
                         const SizedBox(height: 6),
-                        const Text('Field service workflow for engineers', style: TextStyle(color: Color(0xFF5A7485))),
+                        const Text('Field service management application', style: TextStyle(color: Color(0xFF5A7485))),
+                        const SizedBox(height: 14),
                         const SizedBox(height: 22),
                         Container(
                           decoration: BoxDecoration(
@@ -152,6 +153,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 SizedBox(
                                   width: double.infinity,
                                   child: FilledButton.icon(
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: const Color.fromARGB(255, 14, 97, 165),
+                                    ),
                                     onPressed: _isLoading ? null : _login,
                                     icon: const Icon(Icons.login),
                                     label: Padding(
@@ -176,3 +180,4 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
+

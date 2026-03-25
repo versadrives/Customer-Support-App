@@ -13,3 +13,4 @@ Future<void> downloadBytesImpl(Uint8List bytes, String filename) async {
     ..click();
   web.URL.revokeObjectURL(url);
 }
+

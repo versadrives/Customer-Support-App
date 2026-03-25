@@ -45,18 +45,21 @@ class _EngineerTasksTabState extends State<EngineerTasksTab> {
     if (_loading) return const Center(child: CircularProgressIndicator());
 
     final query = _search.text.trim().toLowerCase();
+    const allowedEngineerStatuses = [TicketStatus.assigned, TicketStatus.inProgress, TicketStatus.completed];
     var visible = _tickets.where((t) {
       final matchesQuery = query.isEmpty ||
           t.ticketId.toLowerCase().contains(query) ||
           t.customerName.toLowerCase().contains(query) ||
           t.issue.toLowerCase().contains(query);
-      final matchesStatus = _statusFilter == null || t.status == _statusFilter;
+      final matchesStatus = allowedEngineerStatuses.contains(t.status) &&
+          t.status != TicketStatus.open && // EXPLICIT: Exclude open tasks
+          (_statusFilter == null || t.status == _statusFilter);
       return matchesQuery && matchesStatus;
     }).toList();
 
     visible.sort((a, b) => _sortNewest ? b.createdAt.compareTo(a.createdAt) : a.createdAt.compareTo(b.createdAt));
 
-    if (visible.isEmpty) return const Center(child: Text('No tasks assigned yet.'));
+    if (visible.isEmpty) return const Center(child: Text('No assigned, in-progress, or completed tasks yet.'));
 
     return RefreshIndicator(
       onRefresh: _refresh,
@@ -78,14 +81,9 @@ class _EngineerTasksTabState extends State<EngineerTasksTab> {
             runSpacing: 8,
             children: [
               _StatusChip(
-                label: 'All',
+                label: 'All Tasks',
                 selected: _statusFilter == null,
                 onTap: () => setState(() => _statusFilter = null),
-              ),
-              _StatusChip(
-                label: 'Open',
-                selected: _statusFilter == TicketStatus.open,
-                onTap: () => setState(() => _statusFilter = TicketStatus.open),
               ),
               _StatusChip(
                 label: 'Assigned',
@@ -158,7 +156,7 @@ class _EngineerTasksTabState extends State<EngineerTasksTab> {
                 },
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );

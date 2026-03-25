@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../api/auth_store.dart';
 import '../widgets/top_header.dart';
 import 'engineer_profile_screen.dart';
-import 'login_screen.dart';
 import 'tabs/engineer_reports_tab.dart';
 import 'tabs/engineer_tasks_tab.dart';
 
@@ -30,12 +28,8 @@ class _EngineerHomeScreenState extends State<EngineerHomeScreen> {
         child: Column(
           children: [
             TopHeader(
-              title: 'Engineer Workspace',
+              title: 'Engineer',
               subtitle: widget.engineerName,
-              onLogout: () {
-                AuthStore.clear();
-                Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginScreen()), (r) => false);
-              },
             ),
             Expanded(child: tabs[_index]),
           ],
@@ -53,3 +47,4 @@ class _EngineerHomeScreenState extends State<EngineerHomeScreen> {
     );
   }
 }
+

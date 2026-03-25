@@ -1,122 +1,74 @@
 {% extends "panel/base.html" %}
-{% load form_tags %}
 
 {% block content %}
-<div class="card" style="max-width: 1000px; margin: 0 auto;">
-  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;">
-    <h1 style="margin: 0; font-size: 28px; font-weight: 700; color: var(--ink);">Create New Ticket</h1>
-    <a class="btn" href="{% url 'panel:tickets' %}">← Back to Tickets</a>
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <strong>Create Ticket</strong>
+      <span class="muted">New request intake</span>
+    </div>
+    <form method="post" style="margin-top:12px;">
+      {% csrf_token %}
+      <div class="grid" style="gap:18px;">
+        <div class="card" style="box-shadow:none;border:1px dashed var(--border);">
+          <div style="font-weight:600;margin-bottom:10px;">Customer Details</div>
+          <div class="grid cols-3">
+            <div>
+              <label>Customer name</label>
+              {{ form.customer_name }}
+            </div>
+            <div>
+              <label>Phone number</label>
+              {{ form.customer_phone }}
+            </div>
+            <div>
+              <label>Address</label>
+              {{ form.customer_address }}
+            </div>
+          </div>
+        </div>
+        <div class="card" style="box-shadow:none;border:1px dashed var(--border);">
+          <div style="font-weight:600;margin-bottom:10px;">Ticket Details</div>
+          <div class="grid cols-3">
+            <div>
+              <label>Ticket ID</label>
+              {{ form.ticket_id }}
+            </div>
+            <div>
+              <label>Location</label>
+              {{ form.location }}
+            </div>
+            <div>
+              <label>Issue</label>
+              {{ form.issue }}
+            </div>
+            <div>
+              <label>Model</label>
+              {{ form.model }}
+            </div>
+            <div>
+              <label>Serial Number</label>
+              {{ form.serial_number }}
+            </div>
+            <div>
+              <label>MFG Date</label>
+              {{ form.mfg_date }}
+            </div>
+          </div>
+        </div>
+        <div class="card" style="box-shadow:none;border:1px dashed var(--border);">
+          <div style="font-weight:600;margin-bottom:10px;">Assignment</div>
+          <div class="grid cols-3">
+            <div>
+              <label>Assigned Engineer</label>
+              {{ form.assigned_engineer }}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:10px;">
+        <button class="btn primary" type="submit">Create Ticket</button>
+        <a class="btn" href="/panel/tickets/">Cancel</a>
+      </div>
+    </form>
   </div>
-  
-  <form method="post" novalidate>
-    {% csrf_token %}
-    
-    {% if form.errors %}
-    <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 16px; margin-bottom: 24px;">
-      <strong style="color: #dc2626;">Please fix the errors below:</strong>
-      {{ form.non_field_errors }}
-      {% for field in form %}
-        {% for error in field.errors %}
-          <div style="color: #dc2626; font-size: 14px;">{{ field.label }}: {{ error }}</div>
-        {% endfor %}
-      {% endfor %}
-    </div>
-    {% endif %}
-    
-    <div class="grid cols-3" style="gap: 20px;">
-      <!-- Left Column: Essential -->
-      <div>
-        <label style="display: block; font-weight: 600; margin-bottom: 6px; color: var(--ink);">Ticket ID *</label>
-        {{ form.ticket_id|add_class:"form-input" }}
-        {% if form.ticket_id.errors %}{{ form.ticket_id.errors }}{% endif %}
-      </div>
-      
-      <div>
-        <label style="display: block; font-weight: 600; margin-bottom: 6px; color: var(--ink);">Status *</label>
-        {{ form.status|add_class:"form-input" }}
-      </div>
-      
-      <div>
-        <label style="display: block; font-weight: 600; margin-bottom: 6px; color: var(--ink);">Assigned Engineer</label>
-        {{ form.assigned_engineer|add_class:"form-input" }}
-      </div>
-      
-      <!-- Customer Details -->
-      <div>
-        <label style="display: block; font-weight: 600; margin-bottom: 6px; color: var(--ink);">Customer Name *</label>
-        {{ form.customer_name|add_class:"form-input" }}
-      </div>
-      
-      <div>
-        <label style="display: block; font-weight: 600; margin-bottom: 6px; color: var(--ink);">Phone Number</label>
-        {{ form.customer_phone|add_class:"form-input" }}
-      </div>
-      
-      <div>
-        <label style="display: block; font-weight: 600; margin-bottom: 6px; color: var(--ink);">Customer Address</label>
-        {{ form.customer_address|add_class:"form-input" }}
-      </div>
-      
-      <div>
-        <label style="display: block; font-weight: 600; margin-bottom: 6px; color: var(--ink);">Location</label>
-        {{ form.location|add_class:"form-input" }}
-      </div>
-      
-      <div>
-        <label style="display: block; font-weight: 600; margin-bottom: 6px; color: var(--ink);">Issue Description *</label>
-        {{ form.issue|add_class:"form-textarea" }}
-      </div>
-      
-      <div>
-        <label style="display: block; font-weight: 600; margin-bottom: 6px; color: var(--ink);">Model</label>
-        {{ form.model|add_class:"form-input" }}
-      </div>
-      
-      <div>
-        <label style="display: block; font-weight: 600; margin-bottom: 6px; color: var(--ink);">Serial Number</label>
-        {{ form.serial_number|add_class:"form-input" }}
-      </div>
-      
-      <div>
-        <label style="display: block; font-weight: 600; margin-bottom: 6px; color: var(--ink);">MFG Date</label>
-        {{ form.mfg_date|add_class:"form-input" }}
-      </div>
-    </div>
-    
-    <div style="margin-top: 32px; display: flex; gap: 12px; justify-content: flex-end;">
-      <a class="btn" href="{% url 'panel:tickets' %}">Cancel</a>
-      <button class="btn primary" type="submit" style="padding: 12px 24px; font-weight: 600;">Create Ticket</button>
-    </div>
-  </form>
-</div>
-
-<style>
-.form-input, .form-textarea, select {
-  width: 100%;
-  padding: 12px 14px;
-  border: 2px solid var(--border);
-  border-radius: 12px;
-  font-size: 15px;
-  background: var(--surface);
-  transition: all 0.2s;
-}
-.form-input:focus, .form-textarea:focus, select:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(14, 97, 165, 0.1);
-}
-.form-textarea {
-  min-height: 100px;
-  resize: vertical;
-  font-family: inherit;
-}
-.grid.cols-3 { margin-bottom: 0; }
-@media (max-width: 980px) {
-  .grid.cols-3 { grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 640px) {
-  .grid.cols-3 { grid-template-columns: 1fr; }
-}
-</style>
-
 {% endblock %}
