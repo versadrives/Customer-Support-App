@@ -6,6 +6,15 @@
       <strong>Create Ticket</strong>
       <span class="muted">New request intake</span>
     </div>
+    {% if form.errors %}
+      <div class="card" style="margin-top:12px;border:1px solid #f5c2c7;background:#f8d7da;color:#842029;">
+        <strong>We couldn't save this ticket.</strong>
+        <div style="margin-top:6px;">Please fix the highlighted fields and try again.</div>
+        {% if form.non_field_errors %}
+          <div style="margin-top:6px;">{{ form.non_field_errors }}</div>
+        {% endif %}
+      </div>
+    {% endif %}
     <form method="post" style="margin-top:12px;">
       {% csrf_token %}
       <div class="grid" style="gap:18px;">

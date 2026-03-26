@@ -272,7 +272,9 @@
           <a href="/panel/engineers/" class="{% if page_title == 'Engineers' %}active{% endif %}">Engineers</a>
           <a href="/panel/reports/" class="{% if page_title == 'Reports' %}active{% endif %}">Reports</a>
           <a href="/panel/admins/" class="{% if page_title == 'Admin Profiles' %}active{% endif %}">Admin Profiles</a>
-          <a href="/admin/logout/?next=/admin/">Admin</a>
+          {% if PANEL_SHOW_ADMIN_LINK %}
+            <a href="/admin/logout/?next=/admin/">Admin</a>
+          {% endif %}
         </nav>
       </aside>
       <main class="content">

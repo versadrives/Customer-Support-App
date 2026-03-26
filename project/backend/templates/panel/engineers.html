@@ -4,7 +4,9 @@
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;">
       <strong>Engineers</strong>
-      <a class="btn primary" href="/panel/engineers/new/">Add Engineer</a>
+      {% if PANEL_SHOW_ENGINEER_ADD %}
+        <a class="btn primary" href="/panel/engineers/new/">Add Engineer</a>
+      {% endif %}
     </div>
     <div style="margin-top:12px;overflow:auto;">
       <table class="table">

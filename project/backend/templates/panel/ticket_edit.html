@@ -6,6 +6,15 @@
       <strong>Update Ticket {{ ticket.ticket_id }}</strong>
       <a class="btn" href="/panel/tickets/">Back</a>
     </div>
+    {% if form.errors %}
+      <div class="card" style="margin-top:12px;border:1px solid #f5c2c7;background:#f8d7da;color:#842029;">
+        <strong>We couldn't save this ticket.</strong>
+        <div style="margin-top:6px;">Please fix the highlighted fields and try again.</div>
+        {% if form.non_field_errors %}
+          <div style="margin-top:6px;">{{ form.non_field_errors }}</div>
+        {% endif %}
+      </div>
+    {% endif %}
     <div class="grid cols-3" style="margin-top:12px;">
       <div class="card" style="box-shadow:none;border:1px dashed var(--border);">
         <div style="font-weight:600;margin-bottom:8px;">Customer</div>

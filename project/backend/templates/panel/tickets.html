@@ -6,48 +6,50 @@
       <strong>Tickets</strong>
       <a class="btn primary" href="{% url 'panel:panel_ticket_create' %}">Add Ticket</a>
     </div>
-    <form class="filters" method="get">
-      <div class="inline">
-        <div>
-          <label>Status</label>
-          <select name="status">
-            <option value="">All</option>
-            <option value="ASSIGNED" {% if filters.status == "ASSIGNED" %}selected{% endif %}>Assigned</option>
-            <option value="IN_PROGRESS" {% if filters.status == "IN_PROGRESS" %}selected{% endif %}>In Progress</option>
-            <option value="COMPLETED" {% if filters.status == "COMPLETED" %}selected{% endif %}>Completed</option>
-          </select>
+    {% if PANEL_SHOW_FILTERS %}
+      <form class="filters" method="get">
+        <div class="inline">
+          <div>
+            <label>Status</label>
+            <select name="status">
+              <option value="">All</option>
+              <option value="ASSIGNED" {% if filters.status == "ASSIGNED" %}selected{% endif %}>Assigned</option>
+              <option value="IN_PROGRESS" {% if filters.status == "IN_PROGRESS" %}selected{% endif %}>In Progress</option>
+              <option value="COMPLETED" {% if filters.status == "COMPLETED" %}selected{% endif %}>Completed</option>
+            </select>
+          </div>
+          <div>
+            <label>Engineer</label>
+            <select name="engineer">
+              <option value="">All</option>
+              {% for engineer in engineers %}
+                <option value="{{ engineer.id }}" {% if filters.engineer == engineer.id|stringformat:"s" %}selected{% endif %}>
+                  {{ engineer.user.username }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label>From</label>
+            <input type="date" name="date_from" value="{{ filters.date_from }}" />
+          </div>
+          <div>
+            <label>To</label>
+            <input type="date" name="date_to" value="{{ filters.date_to }}" />
+          </div>
         </div>
-        <div>
-          <label>Engineer</label>
-          <select name="engineer">
-            <option value="">All</option>
-            {% for engineer in engineers %}
-              <option value="{{ engineer.id }}" {% if filters.engineer == engineer.id|stringformat:"s" %}selected{% endif %}>
-                {{ engineer.user.username }}
-              </option>
-            {% endfor %}
-          </select>
+        <div class="inline">
+          <div>
+            <label>Ticket Search</label>
+            <input type="text" name="search" placeholder="Ticket ID" value="{{ filters.search }}" />
+          </div>
         </div>
-        <div>
-          <label>From</label>
-          <input type="date" name="date_from" value="{{ filters.date_from }}" />
+        <div class="actions">
+          <button class="btn primary" type="submit">Apply Filters</button>
+          <a class="btn" href="{% url 'panel:panel_tickets' %}">Clear</a>
         </div>
-        <div>
-          <label>To</label>
-          <input type="date" name="date_to" value="{{ filters.date_to }}" />
-        </div>
-      </div>
-      <div class="inline">
-        <div>
-          <label>Ticket Search</label>
-          <input type="text" name="search" placeholder="Ticket ID" value="{{ filters.search }}" />
-        </div>
-      </div>
-      <div class="actions">
-        <button class="btn primary" type="submit">Apply Filters</button>
-        <a class="btn" href="{% url 'panel:panel_tickets' %}">Clear</a>
-      </div>
-    </form>
+      </form>
+    {% endif %}
     <div style="margin-top:12px;overflow:auto;">
       <table class="table">
         <thead>

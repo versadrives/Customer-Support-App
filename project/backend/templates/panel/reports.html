@@ -6,47 +6,49 @@
       <strong>Reports</strong>
       <a class="btn primary" href="/panel/reports/">Refresh</a>
     </div>
-    <form class="filters" method="get">
-      <div class="inline">
-        <div>
-          <label>Status</label>
-          <select name="status">
-            <option value="">All</option>
-            <option value="ASSIGNED" {% if filters.status == "ASSIGNED" %}selected{% endif %}>Assigned</option>
-            <option value="IN_PROGRESS" {% if filters.status == "IN_PROGRESS" %}selected{% endif %}>In Progress</option>
-            <option value="COMPLETED" {% if filters.status == "COMPLETED" %}selected{% endif %}>Completed</option>
-          </select>
+    {% if PANEL_SHOW_FILTERS %}
+      <form class="filters" method="get">
+        <div class="inline">
+          <div>
+            <label>Status</label>
+            <select name="status">
+              <option value="">All</option>
+              <option value="ASSIGNED" {% if filters.status == "ASSIGNED" %}selected{% endif %}>Assigned</option>
+              <option value="IN_PROGRESS" {% if filters.status == "IN_PROGRESS" %}selected{% endif %}>In Progress</option>
+              <option value="COMPLETED" {% if filters.status == "COMPLETED" %}selected{% endif %}>Completed</option>
+            </select>
+          </div>
+          <div>
+            <label>Engineer</label>
+            <select name="engineer">
+              <option value="">All</option>
+              {% for engineer in engineers %}
+                <option value="{{ engineer.id }}" {% if filters.engineer == engineer.id|stringformat:"s" %}selected{% endif %}>
+                  {{ engineer.user.username }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label>From</label>
+            <input type="date" name="date_from" value="{{ filters.date_from }}" />
+          </div>
+          <div>
+            <label>To</label>
+            <input type="date" name="date_to" value="{{ filters.date_to }}" />
+          </div>
+          <div>
+            <label>Ticket Search</label>
+            <input type="text" name="ticket" placeholder="Ticket ID" value="{{ filters.ticket }}" />
+          </div>
         </div>
-        <div>
-          <label>Engineer</label>
-          <select name="engineer">
-            <option value="">All</option>
-            {% for engineer in engineers %}
-              <option value="{{ engineer.id }}" {% if filters.engineer == engineer.id|stringformat:"s" %}selected{% endif %}>
-                {{ engineer.user.username }}
-              </option>
-            {% endfor %}
-          </select>
+        <div class="actions">
+          <button class="btn primary" type="submit">Apply Filters</button>
+          <button class="btn" type="submit" name="export" value="csv" id="export-csv" disabled>Export Excel (CSV)</button>
+          <a class="btn" href="/panel/reports/">Clear</a>
         </div>
-        <div>
-          <label>From</label>
-          <input type="date" name="date_from" value="{{ filters.date_from }}" />
-        </div>
-        <div>
-          <label>To</label>
-          <input type="date" name="date_to" value="{{ filters.date_to }}" />
-        </div>
-        <div>
-          <label>Ticket Search</label>
-          <input type="text" name="ticket" placeholder="Ticket ID" value="{{ filters.ticket }}" />
-        </div>
-      </div>
-      <div class="actions">
-        <button class="btn primary" type="submit">Apply Filters</button>
-        <button class="btn" type="submit" name="export" value="csv" id="export-csv" disabled>Export Excel (CSV)</button>
-        <a class="btn" href="/panel/reports/">Clear</a>
-      </div>
-    </form>
+      </form>
+    {% endif %}
     <div style="margin-top:12px;overflow:auto;">
       <table class="table">
         <thead>
@@ -78,33 +80,35 @@
       </table>
     </div>
   </div>
-  <script>
-    (function () {
-      var form = document.querySelector(".filters");
-      var exportBtn = document.getElementById("export-csv");
-      if (!form || !exportBtn) return;
+  {% if PANEL_SHOW_FILTERS %}
+    <script>
+      (function () {
+        var form = document.querySelector(".filters");
+        var exportBtn = document.getElementById("export-csv");
+        if (!form || !exportBtn) return;
 
-      function hasFilterValue(el) {
-        if (!el) return false;
-        if (el.tagName === "SELECT") {
-          return el.value && el.value !== "";
+        function hasFilterValue(el) {
+          if (!el) return false;
+          if (el.tagName === "SELECT") {
+            return el.value && el.value !== "";
+          }
+          return el.value && el.value.trim() !== "";
         }
-        return el.value && el.value.trim() !== "";
-      }
 
-      function updateExportState() {
-        var inputs = form.querySelectorAll("select[name], input[name]");
-        var enabled = false;
-        inputs.forEach(function (el) {
-          if (el.name === "export") return;
-          if (hasFilterValue(el)) enabled = true;
-        });
-        exportBtn.disabled = !enabled;
-      }
+        function updateExportState() {
+          var inputs = form.querySelectorAll("select[name], input[name]");
+          var enabled = false;
+          inputs.forEach(function (el) {
+            if (el.name === "export") return;
+            if (hasFilterValue(el)) enabled = true;
+          });
+          exportBtn.disabled = !enabled;
+        }
 
-      form.addEventListener("input", updateExportState);
-      form.addEventListener("change", updateExportState);
-      updateExportState();
-    })();
-  </script>
+        form.addEventListener("input", updateExportState);
+        form.addEventListener("change", updateExportState);
+        updateExportState();
+      })();
+    </script>
+  {% endif %}
 {% endblock %}

@@ -68,7 +68,7 @@ class _EngineerTasksTabState extends State<EngineerTasksTab> {
         children: [
           const Text('My Tasks', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
           const SizedBox(height: 4),
-          const Text('Search, filter, and stay on top of service calls.', style: TextStyle(color: Color(0xFF6B7B8A))),
+          const Text('', style: TextStyle(color: Color(0xFF6B7B8A))),
           const SizedBox(height: 12),
           TextField(
             controller: _search,
