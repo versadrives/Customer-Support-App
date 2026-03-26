@@ -31,18 +31,11 @@ class PanelTicketForm(forms.ModelForm):
             "model",
             "serial_number",
             "mfg_date",
-            "status",
             "assigned_engineer",
         )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Hide "Assigned" from manual selection; it should be derived from assignment.
-        filtered_choices = [
-            choice for choice in self.fields["status"].choices if choice[0] != TicketStatus.ASSIGNED
-        ]
-        self.fields["status"].choices = filtered_choices
-        self.fields["status"].widget.choices = filtered_choices
 
     def save(self, commit=True):
         customer_name = _capfirst(self.cleaned_data["customer_name"])
@@ -60,25 +53,21 @@ class PanelTicketForm(forms.ModelForm):
         self.instance.model = _capfirst(self.cleaned_data.get("model", ""))
         self.instance.serial_number = _capfirst(self.cleaned_data.get("serial_number", ""))
         self.instance.ticket_id = _capfirst(self.cleaned_data.get("ticket_id", ""))
-        # Auto-set to ASSIGNED if an engineer is selected and status is still OPEN.
-        if self.instance.assigned_engineer and self.instance.status == TicketStatus.OPEN:
+        # Keep status in sync with assignment on create.
+        if self.instance.assigned_engineer:
             self.instance.status = TicketStatus.ASSIGNED
+        else:
+            self.instance.status = TicketStatus.OPEN
         return super().save(commit=commit)
 
 
 class PanelTicketStatusForm(forms.ModelForm):
     class Meta:
         model = Ticket
-        fields = ("status", "assigned_engineer")
+        fields = ("assigned_engineer",)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Hide "Assigned" from manual selection; it should be derived from assignment.
-        filtered_choices = [
-            choice for choice in self.fields["status"].choices if choice[0] != TicketStatus.ASSIGNED
-        ]
-        self.fields["status"].choices = filtered_choices
-        self.fields["status"].widget.choices = filtered_choices
 
     def save(self, commit=True):
         instance = super().save(commit=False)

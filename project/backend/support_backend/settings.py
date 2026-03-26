@@ -44,6 +44,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'support_backend.template_flags.panel_flags',
             ],
         },
     }
@@ -90,3 +91,8 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=8),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
 }
+
+# Feature flags for the admin panel UI.
+PANEL_SHOW_FILTERS = False
+PANEL_SHOW_ENGINEER_ADD = False
+PANEL_SHOW_ADMIN_LINK = False
