@@ -39,19 +39,21 @@ def panel_index(request):
     if not request.user.is_staff:
         return redirect("panel:panel_login")
     tickets = Ticket.objects.select_related("customer").all()
+    today = timezone.localdate()
+    tickets_today = tickets.filter(created_at__date=today)
     context = {
         "stats": {
-            "total": tickets.count(),
-            "open": tickets.filter(status=TicketStatus.OPEN).count(),
-            "assigned": tickets.filter(status=TicketStatus.ASSIGNED).count(),
-            "in_progress": tickets.filter(status=TicketStatus.IN_PROGRESS).count(),
-            "completed": tickets.filter(status=TicketStatus.COMPLETED).count(),
+            "total": tickets_today.count(),
+            "open": tickets_today.filter(status=TicketStatus.OPEN).count(),
+            "assigned": tickets_today.filter(status=TicketStatus.ASSIGNED).count(),
+            "in_progress": tickets_today.filter(status=TicketStatus.IN_PROGRESS).count(),
+            "completed": tickets_today.filter(status=TicketStatus.COMPLETED).count(),
             "engineers": EngineerProfile.objects.count(),
             "customers": Customer.objects.count(),
             "reports": Report.objects.count(),
             "admins": AdminProfile.objects.count(),
         },
-        "recent_tickets": tickets.order_by("-created_at")[:8],
+        "recent_tickets": tickets_today.order_by("-created_at")[:8],
         "page_title": "Dashboard",
     }
     return render(request, "panel/index.html", context)
