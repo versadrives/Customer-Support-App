@@ -4,19 +4,4 @@ djangorestframework-simplejwt>=5.3
 django-cors-headers>=4.3
 reportlab>=4.0
 Pillow>=10.0
-# 1) Set commit identity (required once)
-git config --global user.name "Your Name"
-git config --global user.email "you@example.com"
 
-# 2) Make sure everything is committed
-git status
-git commit -m "Initial commit"
-
-# 3) Rename current branch to main
-git branch -M main
-
-# 4) Add GitHub as remote
-git remote add origin https://github.com/versadrives/Customer-Support-App.git
-
-# 5) Push
-git push -u origin main
