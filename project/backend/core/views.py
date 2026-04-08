@@ -147,8 +147,10 @@ class TicketViewSet(viewsets.ModelViewSet):
         try:
             kms_driven = int(request.data['kms_driven'])
             charges_collected = Decimal(str(request.data['charges_collected']))
+            is_customer_polite = request.data['is_customer_polite'].lower() == 'true'
+            difficult_to_attend = request.data['difficult_to_attend'].lower() == 'true'
         except (ValueError, TypeError, InvalidOperation):
-            return Response({'detail': 'Invalid numeric values.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'detail': 'Invalid values.'}, status=status.HTTP_400_BAD_REQUEST)
         report = Report.objects.create(
             ticket=ticket,
             engineer=request.user.engineer_profile,
@@ -160,8 +162,8 @@ class TicketViewSet(viewsets.ModelViewSet):
             comments=request.data['comments'],
             charges_collected=charges_collected,
             kms_driven=kms_driven,
-            is_customer_polite=request.data['is_customer_polite'],
-            difficult_to_attend=request.data['difficult_to_attend'],
+            is_customer_polite=is_customer_polite,
+            difficult_to_attend=difficult_to_attend,
             before_service_photo=request.FILES.get('before_service_photo'),
             after_service_photo=request.FILES.get('after_service_photo'),
         )

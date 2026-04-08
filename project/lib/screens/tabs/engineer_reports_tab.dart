@@ -36,7 +36,9 @@ class _EngineerReportsTabState extends State<EngineerReportsTab> {
   }
 
   Future<void> _refresh() async {
-    setState(() => _future = ApiClient.fetchReports(date: _fmtDate(_selectedDate)));
+    setState(() {
+      _future = ApiClient.fetchReports(date: _fmtDate(_selectedDate));
+    });
     await _future;
   }
 
