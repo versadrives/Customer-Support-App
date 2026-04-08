@@ -1,4 +1,5 @@
 from django.http import HttpResponse
+from django.db import IntegrityError
 from django.db.models import Q
 from django.utils import timezone
 from django.utils.dateparse import parse_date
@@ -144,29 +145,45 @@ class TicketViewSet(viewsets.ModelViewSet):
             return Response({'detail': 'Missing before_service_photo.'}, status=status.HTTP_400_BAD_REQUEST)
         if 'after_service_photo' not in request.FILES:
             return Response({'detail': 'Missing after_service_photo.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if Report.objects.filter(ticket=ticket).exists():
+            return Response({'detail': 'Report already exists for this ticket.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        def _to_bool(value):
+            if isinstance(value, bool):
+                return value
+            if isinstance(value, str):
+                return value.strip().lower() in ('true', '1', 'yes', 'on')
+            return False
+
         try:
             kms_driven = int(request.data['kms_driven'])
             charges_collected = Decimal(str(request.data['charges_collected']))
-            is_customer_polite = request.data['is_customer_polite'].lower() == 'true'
-            difficult_to_attend = request.data['difficult_to_attend'].lower() == 'true'
-        except (ValueError, TypeError, InvalidOperation):
+            is_customer_polite = _to_bool(request.data['is_customer_polite'])
+            difficult_to_attend = _to_bool(request.data['difficult_to_attend'])
+        except (ValueError, TypeError, InvalidOperation, AttributeError):
             return Response({'detail': 'Invalid values.'}, status=status.HTTP_400_BAD_REQUEST)
-        report = Report.objects.create(
-            ticket=ticket,
-            engineer=request.user.engineer_profile,
-            service_provider_code=request.user.username,
-            serial_number=request.data['serial_number'],
-            problem_identified=request.data['problem_identified'],
-            action_taken=request.data['action_taken'],
-            pcb_board_number=request.data['pcb_board_number'],
-            comments=request.data['comments'],
-            charges_collected=charges_collected,
-            kms_driven=kms_driven,
-            is_customer_polite=is_customer_polite,
-            difficult_to_attend=difficult_to_attend,
-            before_service_photo=request.FILES.get('before_service_photo'),
-            after_service_photo=request.FILES.get('after_service_photo'),
-        )
+
+        try:
+            report = Report.objects.create(
+                ticket=ticket,
+                engineer=request.user.engineer_profile,
+                service_provider_code=request.user.username,
+                serial_number=request.data['serial_number'],
+                problem_identified=request.data['problem_identified'],
+                action_taken=request.data['action_taken'],
+                pcb_board_number=request.data['pcb_board_number'],
+                comments=request.data['comments'],
+                charges_collected=charges_collected,
+                kms_driven=kms_driven,
+                is_customer_polite=is_customer_polite,
+                difficult_to_attend=difficult_to_attend,
+                before_service_photo=request.FILES.get('before_service_photo'),
+                after_service_photo=request.FILES.get('after_service_photo'),
+            )
+        except IntegrityError:
+            return Response({'detail': 'Unable to save report. A report may already exist for this ticket.'}, status=status.HTTP_400_BAD_REQUEST)
+
         ticket.status = TicketStatus.COMPLETED
         ticket.completed_at = ticket.completed_at or timezone.now()
         ticket.save()
