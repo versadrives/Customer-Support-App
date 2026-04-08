@@ -82,25 +82,24 @@ class PanelTicketStatusForm(forms.ModelForm):
 class PanelEngineerForm(forms.Form):
     username = forms.CharField()
     password = forms.CharField(widget=forms.PasswordInput)
-    first_name = forms.CharField(required=False)
-    last_name = forms.CharField(required=False)
-    email = forms.EmailField(required=False)
+    name = forms.CharField(label="Name")
     phone = forms.CharField(required=False)
-    active = forms.BooleanField(required=False, initial=True)
 
     def save(self):
-        first_name = _capfirst(self.cleaned_data.get('first_name', ''))
-        last_name = _capfirst(self.cleaned_data.get('last_name', ''))
+        full_name = _capfirst(self.cleaned_data.get('name', ''))
+        parts = full_name.split()
+        first_name = parts[0] if parts else ''
+        last_name = ' '.join(parts[1:]) if len(parts) > 1 else ''
         user = User.objects.create_user(
             username=self.cleaned_data["username"],
             password=self.cleaned_data["password"],
             first_name=first_name,
             last_name=last_name,
-            email=self.cleaned_data.get("email", ""),
+            email="",
         )
         profile = EngineerProfile.objects.create(
             user=user,
             phone=self.cleaned_data.get("phone", ""),
-            active=self.cleaned_data.get("active", True),
+            active=True,
         )
         return profile

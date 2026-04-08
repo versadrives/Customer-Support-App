@@ -17,7 +17,6 @@ class TaskDetailScreen extends StatefulWidget {
 }
 
 class _TaskDetailScreenState extends State<TaskDetailScreen> {
-  final _serviceProviderCode = TextEditingController();
   final _numberOfFans = TextEditingController();
   final _serialNumber = TextEditingController();
   final _problemIdentified = TextEditingController();
@@ -31,7 +30,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
   @override
   void dispose() {
-    _serviceProviderCode.dispose();
     _numberOfFans.dispose();
     _serialNumber.dispose();
     _problemIdentified.dispose();
@@ -57,8 +55,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   }
 
   Future<void> _complete() async {
-    if (_serviceProviderCode.text.trim().isEmpty ||
-        _numberOfFans.text.trim().isEmpty ||
+    if (_numberOfFans.text.trim().isEmpty ||
         _serialNumber.text.trim().isEmpty ||
         _problemIdentified.text.trim().isEmpty ||
         _action.text.trim().isEmpty ||
@@ -77,7 +74,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     try {
       await ApiClient.completeTicket(
         ticketId: widget.ticket.id,
-        serviceProviderCode: _serviceProviderCode.text.trim(),
         numberOfFans: numberOfFans,
         serialNumber: _serialNumber.text.trim(),
         problemIdentified: _problemIdentified.text.trim(),
@@ -156,8 +152,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             icon: Icons.description_outlined,
             child: Column(
               children: [
-                TextField(controller: _serviceProviderCode, decoration: const InputDecoration(labelText: 'Service Provider Code')),
-                const SizedBox(height: 8),
                 Row(
                   children: [
                     Expanded(

@@ -15,8 +15,15 @@ class EngineerProfile(models.Model):
     phone = models.CharField(max_length=30, blank=True)
     active = models.BooleanField(default=True)
 
+    @property
+    def display_name(self) -> str:
+        name = self.user.get_full_name().strip()
+        if name:
+            return f'{name} - {self.user.username}'
+        return self.user.username
+
     def __str__(self) -> str:
-        return f'Engineer: {self.user.username}'
+        return self.display_name
 
 
 class Customer(models.Model):

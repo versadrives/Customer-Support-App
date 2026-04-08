@@ -126,7 +126,6 @@ class TicketViewSet(viewsets.ModelViewSet):
         if not ticket.assigned_engineer or ticket.assigned_engineer.user != request.user:
             return Response({'detail': 'Not your ticket.'}, status=status.HTTP_403_FORBIDDEN)
         required_fields = [
-            'service_provider_code',
             'number_of_fans',
             'serial_number',
             'problem_identified',
@@ -150,7 +149,7 @@ class TicketViewSet(viewsets.ModelViewSet):
         report = Report.objects.create(
             ticket=ticket,
             engineer=request.user.engineer_profile,
-            service_provider_code=request.data['service_provider_code'],
+            service_provider_code=request.user.username,
             number_of_fans=number_of_fans,
             serial_number=request.data['serial_number'],
             problem_identified=request.data['problem_identified'],
@@ -205,7 +204,7 @@ class ReportViewSet(viewsets.ModelViewSet):
         y -= 24
         p.setFont('Helvetica', 11)
         lines = [
-            f"Engineer: {report.engineer.user.username}",
+            f"Engineer: {report.engineer.display_name}",
             f"Customer: {report.ticket.customer.name}",
             f"Location: {report.ticket.location}",
             f"Status: {report.ticket.status}",

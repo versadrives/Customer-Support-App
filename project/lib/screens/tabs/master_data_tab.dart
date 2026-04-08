@@ -14,8 +14,7 @@ class MasterDataTab extends StatefulWidget {
 class _MasterDataTabState extends State<MasterDataTab> {
   final _engUsername = TextEditingController();
   final _engPassword = TextEditingController();
-  final _engFirst = TextEditingController();
-  final _engLast = TextEditingController();
+  final _engName = TextEditingController();
   final _engPhone = TextEditingController();
   final _engSearch = TextEditingController();
 
@@ -42,8 +41,8 @@ class _MasterDataTabState extends State<MasterDataTab> {
   }
 
   Future<void> _addEngineer() async {
-    if (_engUsername.text.trim().isEmpty || _engPassword.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Username and password required')));
+    if (_engName.text.trim().isEmpty || _engUsername.text.trim().isEmpty || _engPassword.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Name, username, and password required')));
       return;
     }
     try {
@@ -51,13 +50,11 @@ class _MasterDataTabState extends State<MasterDataTab> {
         username: _engUsername.text.trim(),
         password: _engPassword.text.trim(),
         phone: _engPhone.text.trim(),
-        firstName: _engFirst.text.trim(),
-        lastName: _engLast.text.trim(),
+        name: _engName.text.trim(),
       );
       _engUsername.clear();
       _engPassword.clear();
-      _engFirst.clear();
-      _engLast.clear();
+      _engName.clear();
       _engPhone.clear();
       await _load();
       if (!mounted) return;
@@ -69,8 +66,7 @@ class _MasterDataTabState extends State<MasterDataTab> {
   }
 
   Future<void> _editEngineer(EngineerProfile engineer) async {
-    final first = TextEditingController(text: engineer.firstName);
-    final last = TextEditingController(text: engineer.lastName);
+    final name = TextEditingController(text: engineer.fullName);
     final phone = TextEditingController(text: engineer.phone);
     final password = TextEditingController();
     bool active = engineer.active;
@@ -85,9 +81,7 @@ class _MasterDataTabState extends State<MasterDataTab> {
               content: SingleChildScrollView(
                 child: Column(
                   children: [
-                    TextField(controller: first, decoration: const InputDecoration(labelText: 'First name')),
-                    const SizedBox(height: 8),
-                    TextField(controller: last, decoration: const InputDecoration(labelText: 'Last name')),
+                    TextField(controller: name, decoration: const InputDecoration(labelText: 'Name')),
                     const SizedBox(height: 8),
                     TextField(controller: phone, decoration: const InputDecoration(labelText: 'Phone')),
                     const SizedBox(height: 8),
@@ -120,8 +114,7 @@ class _MasterDataTabState extends State<MasterDataTab> {
     try {
       await ApiClient.updateEngineer(
         id: engineer.id,
-        firstName: first.text.trim(),
-        lastName: last.text.trim(),
+        name: name.text.trim(),
         phone: phone.text.trim(),
         password: password.text.trim(),
         active: active,
@@ -133,8 +126,7 @@ class _MasterDataTabState extends State<MasterDataTab> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Update failed. $e')));
     } finally {
-      first.dispose();
-      last.dispose();
+      name.dispose();
       phone.dispose();
       password.dispose();
     }
@@ -156,8 +148,7 @@ class _MasterDataTabState extends State<MasterDataTab> {
   void dispose() {
     _engUsername.dispose();
     _engPassword.dispose();
-    _engFirst.dispose();
-    _engLast.dispose();
+    _engName.dispose();
     _engPhone.dispose();
     _engSearch.dispose();
     super.dispose();
@@ -211,19 +202,13 @@ class _MasterDataTabState extends State<MasterDataTab> {
           icon: Icons.engineering_outlined,
           child: Column(
             children: [
+              TextField(controller: _engName, decoration: const InputDecoration(labelText: 'Name')),
+              const SizedBox(height: 8),
+              TextField(controller: _engPhone, decoration: const InputDecoration(labelText: 'Phone')),
+              const SizedBox(height: 8),
               TextField(controller: _engUsername, decoration: const InputDecoration(labelText: 'Username')),
               const SizedBox(height: 8),
               TextField(controller: _engPassword, decoration: const InputDecoration(labelText: 'Password'), obscureText: true),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(child: TextField(controller: _engFirst, decoration: const InputDecoration(labelText: 'First name'))),
-                  const SizedBox(width: 8),
-                  Expanded(child: TextField(controller: _engLast, decoration: const InputDecoration(labelText: 'Last name'))),
-                ],
-              ),
-              const SizedBox(height: 8),
-              TextField(controller: _engPhone, decoration: const InputDecoration(labelText: 'Phone')),
               const SizedBox(height: 10),
               SizedBox(width: double.infinity, child: FilledButton(onPressed: _addEngineer, child: const Text('Add Engineer'))),
               const SizedBox(height: 12),

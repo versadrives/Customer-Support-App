@@ -139,7 +139,6 @@ class ApiClient {
 
   static Future<ReportData> completeTicket({
     required int ticketId,
-    required String serviceProviderCode,
     required int numberOfFans,
     required String serialNumber,
     required String problemIdentified,
@@ -155,7 +154,7 @@ class ApiClient {
       _uri('/api/tickets/$ticketId/complete/'),
       headers: {'Content-Type': 'application/json', ...AuthStore.authHeaders()},
       body: jsonEncode({
-        'service_provider_code': serviceProviderCode,
+        'service_provider_code': AuthStore.username ?? '',
         'number_of_fans': numberOfFans,
         'serial_number': serialNumber,
         'problem_identified': problemIdentified,
@@ -195,8 +194,7 @@ class ApiClient {
     required String username,
     required String password,
     required String phone,
-    required String firstName,
-    required String lastName,
+    required String name,
   }) async {
     final res = await http.post(
       _uri('/api/engineers/'),
@@ -205,8 +203,7 @@ class ApiClient {
         'username': username,
         'password': password,
         'phone': phone,
-        'first_name': firstName,
-        'last_name': lastName,
+        'name': name,
         'active': true,
       }),
     );
@@ -219,15 +216,13 @@ class ApiClient {
   static Future<EngineerProfile> updateEngineer({
     required int id,
     String? phone,
-    String? firstName,
-    String? lastName,
+    String? name,
     String? password,
     bool? active,
   }) async {
     final body = <String, dynamic>{};
     if (phone != null) body['phone'] = phone;
-    if (firstName != null) body['first_name'] = firstName;
-    if (lastName != null) body['last_name'] = lastName;
+    if (name != null) body['name'] = name;
     if (password != null && password.isNotEmpty) body['password'] = password;
     if (active != null) body['active'] = active;
 

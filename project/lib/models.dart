@@ -153,9 +153,13 @@ class EngineerProfile {
   final String phone;
   final bool active;
 
+  String get fullName {
+    return [firstName, lastName].where((s) => s.trim().isNotEmpty).join(' ').trim();
+  }
+
   String get displayName {
-    final name = [firstName, lastName].where((s) => s.trim().isNotEmpty).join(' ');
-    return name.isEmpty ? username : name;
+    final name = fullName;
+    return name.isEmpty ? username : '$name - $username';
   }
 
   factory EngineerProfile.fromApi(Map<String, dynamic> json) {

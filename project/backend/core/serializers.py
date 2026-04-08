@@ -16,12 +16,13 @@ class EngineerProfileSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(write_only=True, required=False, allow_blank=True)
     last_name = serializers.CharField(write_only=True, required=False, allow_blank=True)
     email = serializers.EmailField(write_only=True, required=False, allow_blank=True)
+    name = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     user = UserSummarySerializer(read_only=True)
 
     class Meta:
         model = EngineerProfile
-        fields = ('id', 'user', 'username', 'password', 'first_name', 'last_name', 'email', 'phone', 'active')
+        fields = ('id', 'user', 'username', 'password', 'first_name', 'last_name', 'email', 'name', 'phone', 'active')
 
     def create(self, validated_data):
         username = validated_data.pop('username')
@@ -29,12 +30,22 @@ class EngineerProfileSerializer(serializers.ModelSerializer):
         first_name = validated_data.pop('first_name', '')
         last_name = validated_data.pop('last_name', '')
         email = validated_data.pop('email', '')
+        name = validated_data.pop('name', '').strip()
+        if name and not (first_name or last_name):
+            parts = name.split()
+            first_name = parts[0]
+            last_name = ' '.join(parts[1:]) if len(parts) > 1 else ''
 
         user = User.objects.create_user(username=username, password=password, first_name=first_name, last_name=last_name, email=email)
         return EngineerProfile.objects.create(user=user, **validated_data)
 
     def update(self, instance, validated_data):
         user = instance.user
+        name = validated_data.pop('name', '').strip()
+        if name:
+            parts = name.split()
+            user.first_name = parts[0]
+            user.last_name = ' '.join(parts[1:]) if len(parts) > 1 else ''
         for field in ('first_name', 'last_name', 'email'):
             if field in validated_data:
                 setattr(user, field, validated_data.pop(field))
@@ -63,7 +74,7 @@ class TicketSerializer(serializers.ModelSerializer):
     customer_name = serializers.CharField(source='customer.name', read_only=True)
     customer_phone = serializers.CharField(source='customer.contact_phone', read_only=True)
     customer_address = serializers.CharField(source='customer.address', read_only=True)
-    assigned_engineer_name = serializers.CharField(source='assigned_engineer.user.username', read_only=True)
+    assigned_engineer_name = serializers.SerializerMethodField()
     created_by_name = serializers.CharField(source='created_by.username', read_only=True)
 
     class Meta:
@@ -93,10 +104,15 @@ class TicketSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ('created_by', 'created_at', 'assigned_at', 'started_at', 'completed_at')
 
+    def get_assigned_engineer_name(self, obj):
+        if not obj.assigned_engineer:
+            return ''
+        return obj.assigned_engineer.display_name
+
 
 class ReportSerializer(serializers.ModelSerializer):
     ticket_id = serializers.CharField(source='ticket.ticket_id', read_only=True)
-    engineer_name = serializers.CharField(source='engineer.user.username', read_only=True)
+    engineer_name = serializers.CharField(source='engineer.display_name', read_only=True)
     ticket_created_at = serializers.DateTimeField(source='ticket.created_at', read_only=True)
     ticket_started_at = serializers.DateTimeField(source='ticket.started_at', read_only=True)
     ticket_completed_at = serializers.DateTimeField(source='ticket.completed_at', read_only=True)

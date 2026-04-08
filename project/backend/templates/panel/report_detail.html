@@ -11,7 +11,7 @@
         <tbody>
           <tr><th>Log Date</th><td>{{ report.created_at|date:"Y-m-d H:i" }}</td></tr>
           <tr><th>Ticket No</th><td>{{ report.ticket.ticket_id }}</td></tr>
-          <tr><th>Attended By</th><td>{{ report.engineer.user.username }}</td></tr>
+          <tr><th>Attended By</th><td>{{ report.engineer.display_name }}</td></tr>
           <tr><th>Service Provider Code</th><td>{{ report.service_provider_code }}</td></tr>
           <tr><th>No. of Fans</th><td>{{ report.number_of_fans }}</td></tr>
           <tr><th>Serial Number</th><td>{{ report.serial_number }}</td></tr>

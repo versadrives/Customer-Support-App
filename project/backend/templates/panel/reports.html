@@ -24,7 +24,7 @@
               <option value="">All</option>
               {% for engineer in engineers %}
                 <option value="{{ engineer.id }}" {% if filters.engineer == engineer.id|stringformat:"s" %}selected{% endif %}>
-                  {{ engineer.user.username }}
+                  {{ engineer.display_name }}
                 </option>
               {% endfor %}
             </select>
@@ -66,7 +66,7 @@
           {% for r in reports %}
             <tr>
               <td>{{ r.ticket.ticket_id }}</td>
-              <td>{{ r.engineer.user.username }}</td>
+              <td>{{ r.engineer.display_name }}</td>
               <td>{{ r.service_provider_code }}</td>
               <td>{{ r.charges_collected }}</td>
               <td>{{ r.kms_driven }}</td>
