@@ -22,6 +22,30 @@
           <tr><th>KM's Driven</th><td>{{ report.kms_driven }}</td></tr>
           <tr><th>Customer Polite</th><td>{% if report.is_customer_polite %}Yes{% else %}No{% endif %}</td></tr>
           <tr><th>Difficult To Attend</th><td>{% if report.difficult_to_attend %}Yes{% else %}No{% endif %}</td></tr>
+          <tr>
+            <th>Before Service Photo</th>
+            <td>
+              {% if report.before_service_photo %}
+                <a href="{{ report.before_service_photo.url }}" target="_blank">
+                  <img src="{{ report.before_service_photo.url }}" alt="Before service" style="max-width:240px;max-height:240px;border-radius:6px;border:1px solid #e2e2e2;" />
+                </a>
+              {% else %}
+                -
+              {% endif %}
+            </td>
+          </tr>
+          <tr>
+            <th>After Service Photo</th>
+            <td>
+              {% if report.after_service_photo %}
+                <a href="{{ report.after_service_photo.url }}" target="_blank">
+                  <img src="{{ report.after_service_photo.url }}" alt="After service" style="max-width:240px;max-height:240px;border-radius:6px;border:1px solid #e2e2e2;" />
+                </a>
+              {% else %}
+                -
+              {% endif %}
+            </td>
+          </tr>
         </tbody>
       </table>
     </div>

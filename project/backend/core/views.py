@@ -140,6 +140,10 @@ class TicketViewSet(viewsets.ModelViewSet):
         for field in required_fields:
             if field not in request.data or request.data.get(field) in (None, ''):
                 return Response({'detail': f'Missing {field}.'}, status=status.HTTP_400_BAD_REQUEST)
+        if 'before_service_photo' not in request.FILES:
+            return Response({'detail': 'Missing before_service_photo.'}, status=status.HTTP_400_BAD_REQUEST)
+        if 'after_service_photo' not in request.FILES:
+            return Response({'detail': 'Missing after_service_photo.'}, status=status.HTTP_400_BAD_REQUEST)
         try:
             kms_driven = int(request.data['kms_driven'])
             charges_collected = Decimal(str(request.data['charges_collected']))
@@ -158,6 +162,8 @@ class TicketViewSet(viewsets.ModelViewSet):
             kms_driven=kms_driven,
             is_customer_polite=request.data['is_customer_polite'],
             difficult_to_attend=request.data['difficult_to_attend'],
+            before_service_photo=request.FILES.get('before_service_photo'),
+            after_service_photo=request.FILES.get('after_service_photo'),
         )
         ticket.status = TicketStatus.COMPLETED
         ticket.completed_at = ticket.completed_at or timezone.now()

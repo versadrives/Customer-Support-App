@@ -3,6 +3,7 @@ djangorestframework>=3.14
 djangorestframework-simplejwt>=5.3
 django-cors-headers>=4.3
 reportlab>=4.0
+Pillow>=10.0
 # 1) Set commit identity (required once)
 git config --global user.name "Your Name"
 git config --global user.email "you@example.com"

@@ -79,6 +79,8 @@ class Report(models.Model):
     kms_driven = models.PositiveIntegerField()
     is_customer_polite = models.BooleanField()
     difficult_to_attend = models.BooleanField()
+    before_service_photo = models.ImageField(upload_to='reports/before/', null=True, blank=True)
+    after_service_photo = models.ImageField(upload_to='reports/after/', null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 
 import '../models.dart';
 import 'api_config.dart';
@@ -148,23 +149,28 @@ class ApiClient {
     required String kmsDriven,
     required bool isCustomerPolite,
     required bool difficultToAttend,
+    required XFile beforeServicePhoto,
+    required XFile afterServicePhoto,
   }) async {
-    final res = await http.post(
-      _uri('/api/tickets/$ticketId/complete/'),
-      headers: {'Content-Type': 'application/json', ...AuthStore.authHeaders()},
-      body: jsonEncode({
-        'service_provider_code': AuthStore.username ?? '',
-        'serial_number': serialNumber,
-        'problem_identified': problemIdentified,
-        'action_taken': actionTaken,
-        'pcb_board_number': pcbBoardNumber,
-        'comments': comments,
-        'charges_collected': chargesCollected,
-        'kms_driven': kmsDriven,
-        'is_customer_polite': isCustomerPolite,
-        'difficult_to_attend': difficultToAttend,
-      }),
-    );
+    final request = http.MultipartRequest('POST', _uri('/api/tickets/$ticketId/complete/'));
+    request.headers.addAll(AuthStore.authHeaders());
+    request.fields.addAll({
+      'service_provider_code': AuthStore.username ?? '',
+      'serial_number': serialNumber,
+      'problem_identified': problemIdentified,
+      'action_taken': actionTaken,
+      'pcb_board_number': pcbBoardNumber,
+      'comments': comments,
+      'charges_collected': chargesCollected,
+      'kms_driven': kmsDriven,
+      'is_customer_polite': isCustomerPolite.toString(),
+      'difficult_to_attend': difficultToAttend.toString(),
+    });
+    request.files.add(await http.MultipartFile.fromPath('before_service_photo', beforeServicePhoto.path));
+    request.files.add(await http.MultipartFile.fromPath('after_service_photo', afterServicePhoto.path));
+
+    final streamed = await request.send();
+    final res = await http.Response.fromStream(streamed);
     if (res.statusCode != 201) {
       throw Exception('Failed to complete ticket (${res.statusCode})');
     }

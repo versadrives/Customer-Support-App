@@ -89,6 +89,8 @@ class ReportData {
     required this.kmsDriven,
     required this.isCustomerPolite,
     required this.difficultToAttend,
+    this.beforeServicePhoto,
+    this.afterServicePhoto,
     required this.createdAt,
   });
 
@@ -108,6 +110,8 @@ class ReportData {
   final int kmsDriven;
   final bool isCustomerPolite;
   final bool difficultToAttend;
+  final String? beforeServicePhoto;
+  final String? afterServicePhoto;
   final DateTime createdAt;
 
   factory ReportData.fromApi(Map<String, dynamic> json) {
@@ -128,6 +132,8 @@ class ReportData {
       kmsDriven: (json['kms_driven'] ?? 0) as int,
       isCustomerPolite: (json['is_customer_polite'] ?? false) as bool,
       difficultToAttend: (json['difficult_to_attend'] ?? false) as bool,
+      beforeServicePhoto: json['before_service_photo'] as String?,
+      afterServicePhoto: json['after_service_photo'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
     );
   }

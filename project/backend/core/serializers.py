@@ -116,6 +116,8 @@ class ReportSerializer(serializers.ModelSerializer):
     ticket_created_at = serializers.DateTimeField(source='ticket.created_at', read_only=True)
     ticket_started_at = serializers.DateTimeField(source='ticket.started_at', read_only=True)
     ticket_completed_at = serializers.DateTimeField(source='ticket.completed_at', read_only=True)
+    before_service_photo = serializers.ImageField(required=False, allow_null=True)
+    after_service_photo = serializers.ImageField(required=False, allow_null=True)
 
     class Meta:
         model = Report
@@ -138,6 +140,8 @@ class ReportSerializer(serializers.ModelSerializer):
             'kms_driven',
             'is_customer_polite',
             'difficult_to_attend',
+            'before_service_photo',
+            'after_service_photo',
             'created_at',
         )
         read_only_fields = ('created_at',)

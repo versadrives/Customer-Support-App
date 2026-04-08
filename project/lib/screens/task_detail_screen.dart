@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../api/api_client.dart';
 import '../api/auth_store.dart';
@@ -26,6 +29,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   final _kmsDriven = TextEditingController();
   bool _isCustomerPolite = true;
   bool _difficultToAttend = false;
+  final _picker = ImagePicker();
+  XFile? _beforePhoto;
+  XFile? _afterPhoto;
 
   @override
   void dispose() {
@@ -37,6 +43,19 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     _chargesCollected.dispose();
     _kmsDriven.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickPhoto({required bool before, required ImageSource source}) async {
+    final picked = await _picker.pickImage(source: source, imageQuality: 80);
+    if (!mounted) return;
+    if (picked == null) return;
+    setState(() {
+      if (before) {
+        _beforePhoto = picked;
+      } else {
+        _afterPhoto = picked;
+      }
+    });
   }
 
   Future<void> _start() async {
@@ -62,6 +81,10 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fill all report fields')));
       return;
     }
+    if (_beforePhoto == null || _afterPhoto == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please add before and after photos')));
+      return;
+    }
     final kmsDriven = int.tryParse(_kmsDriven.text.trim());
     if (kmsDriven == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter valid numbers for KM\'s driven')));
@@ -79,6 +102,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         kmsDriven: kmsDriven.toString(),
         isCustomerPolite: _isCustomerPolite,
         difficultToAttend: _difficultToAttend,
+        beforeServicePhoto: _beforePhoto!,
+        afterServicePhoto: _afterPhoto!,
       );
       widget.ticket.status = TicketStatus.completed;
       widget.ticket.completedAt = DateTime.now();
@@ -220,6 +245,20 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                   value: _difficultToAttend,
                   onChanged: (v) => setState(() => _difficultToAttend = v),
                 ),
+                const SizedBox(height: 8),
+                _PhotoPickerRow(
+                  title: 'Before Service Photo',
+                  file: _beforePhoto,
+                  onCamera: () => _pickPhoto(before: true, source: ImageSource.camera),
+                  onGallery: () => _pickPhoto(before: true, source: ImageSource.gallery),
+                ),
+                const SizedBox(height: 12),
+                _PhotoPickerRow(
+                  title: 'After Service Photo',
+                  file: _afterPhoto,
+                  onCamera: () => _pickPhoto(before: false, source: ImageSource.camera),
+                  onGallery: () => _pickPhoto(before: false, source: ImageSource.gallery),
+                ),
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
@@ -234,6 +273,70 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _PhotoPickerRow extends StatelessWidget {
+  const _PhotoPickerRow({
+    required this.title,
+    required this.file,
+    required this.onCamera,
+    required this.onGallery,
+  });
+
+  final String title;
+  final XFile? file;
+  final VoidCallback onCamera;
+  final VoidCallback onGallery;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Expanded(
+              child: Container(
+                height: 140,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3F5F7),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFE1E5EA)),
+                ),
+                child: file == null
+                    ? const Center(child: Text('No photo selected'))
+                    : ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.file(
+                          File(file!.path),
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                        ),
+                      ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Column(
+              children: [
+                IconButton(
+                  tooltip: 'Take photo',
+                  onPressed: onCamera,
+                  icon: const Icon(Icons.photo_camera),
+                ),
+                IconButton(
+                  tooltip: 'Pick from gallery',
+                  onPressed: onGallery,
+                  icon: const Icon(Icons.photo_library),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

@@ -240,6 +240,8 @@ def panel_reports(request):
             "KMs Driven",
             "Customer Polite",
             "Difficult To Attend",
+            "Before Service Photo",
+            "After Service Photo",
         ])
         for report in reports:
             ticket = report.ticket
@@ -265,6 +267,8 @@ def panel_reports(request):
                 report.kms_driven,
                 "Yes" if report.is_customer_polite else "No",
                 "Yes" if report.difficult_to_attend else "No",
+                report.before_service_photo.url if report.before_service_photo else "",
+                report.after_service_photo.url if report.after_service_photo else "",
             ])
         return response
 
