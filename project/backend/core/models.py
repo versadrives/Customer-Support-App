@@ -70,7 +70,6 @@ class Report(models.Model):
     ticket = models.OneToOneField(Ticket, on_delete=models.CASCADE, related_name='report')
     engineer = models.ForeignKey(EngineerProfile, on_delete=models.PROTECT, related_name='reports')
     service_provider_code = models.CharField(max_length=60)
-    number_of_fans = models.PositiveIntegerField()
     serial_number = models.CharField(max_length=120)
     problem_identified = models.TextField()
     action_taken = models.TextField()

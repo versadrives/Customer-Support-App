@@ -17,7 +17,6 @@ class TaskDetailScreen extends StatefulWidget {
 }
 
 class _TaskDetailScreenState extends State<TaskDetailScreen> {
-  final _numberOfFans = TextEditingController();
   final _serialNumber = TextEditingController();
   final _problemIdentified = TextEditingController();
   final _action = TextEditingController();
@@ -30,7 +29,6 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
   @override
   void dispose() {
-    _numberOfFans.dispose();
     _serialNumber.dispose();
     _problemIdentified.dispose();
     _action.dispose();
@@ -55,8 +53,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   }
 
   Future<void> _complete() async {
-    if (_numberOfFans.text.trim().isEmpty ||
-        _serialNumber.text.trim().isEmpty ||
+    if (_serialNumber.text.trim().isEmpty ||
         _problemIdentified.text.trim().isEmpty ||
         _action.text.trim().isEmpty ||
         _comments.text.trim().isEmpty ||
@@ -65,16 +62,14 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fill all report fields')));
       return;
     }
-    final numberOfFans = int.tryParse(_numberOfFans.text.trim());
     final kmsDriven = int.tryParse(_kmsDriven.text.trim());
-    if (numberOfFans == null || kmsDriven == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter valid numbers for fans and KM\'s driven')));
+    if (kmsDriven == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter valid numbers for KM\'s driven')));
       return;
     }
     try {
       await ApiClient.completeTicket(
         ticketId: widget.ticket.id,
-        numberOfFans: numberOfFans,
         serialNumber: _serialNumber.text.trim(),
         problemIdentified: _problemIdentified.text.trim(),
         actionTaken: _action.text.trim(),
@@ -156,26 +151,16 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                   children: [
                     Expanded(
                       child: TextField(
-                        controller: _numberOfFans,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: 'Number of fans'),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: TextField(
                         controller: _serialNumber,
-                        readOnly: true,
                         decoration: InputDecoration(
                           labelText: 'Serial number',
-                          helperText: 'Scan required',
+                          helperText: 'Type or scan',
                           suffixIcon: IconButton(
                             tooltip: 'Scan serial number',
                             icon: const Icon(Icons.qr_code_scanner),
                             onPressed: () => _scanInto(_serialNumber, title: 'Scan Serial Number'),
                           ),
                         ),
-                        onTap: () => _scanInto(_serialNumber, title: 'Scan Serial Number'),
                       ),
                     ),
                   ],

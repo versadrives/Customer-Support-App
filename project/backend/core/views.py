@@ -1,6 +1,7 @@
 from django.http import HttpResponse
 from django.db.models import Q
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from decimal import Decimal, InvalidOperation
 from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
@@ -126,7 +127,6 @@ class TicketViewSet(viewsets.ModelViewSet):
         if not ticket.assigned_engineer or ticket.assigned_engineer.user != request.user:
             return Response({'detail': 'Not your ticket.'}, status=status.HTTP_403_FORBIDDEN)
         required_fields = [
-            'number_of_fans',
             'serial_number',
             'problem_identified',
             'action_taken',
@@ -141,7 +141,6 @@ class TicketViewSet(viewsets.ModelViewSet):
             if field not in request.data or request.data.get(field) in (None, ''):
                 return Response({'detail': f'Missing {field}.'}, status=status.HTTP_400_BAD_REQUEST)
         try:
-            number_of_fans = int(request.data['number_of_fans'])
             kms_driven = int(request.data['kms_driven'])
             charges_collected = Decimal(str(request.data['charges_collected']))
         except (ValueError, TypeError, InvalidOperation):
@@ -150,7 +149,6 @@ class TicketViewSet(viewsets.ModelViewSet):
             ticket=ticket,
             engineer=request.user.engineer_profile,
             service_provider_code=request.user.username,
-            number_of_fans=number_of_fans,
             serial_number=request.data['serial_number'],
             problem_identified=request.data['problem_identified'],
             action_taken=request.data['action_taken'],
@@ -181,10 +179,34 @@ class ReportViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = super().get_queryset()
         if IsAdmin().has_permission(self.request, self):
-            return qs
+            pass
         if hasattr(self.request.user, 'engineer_profile'):
             return qs.filter(engineer=self.request.user.engineer_profile)
-        return qs.none()
+        if not IsAdmin().has_permission(self.request, self):
+            return qs.none()
+
+        return qs
+
+    def filter_queryset(self, queryset):
+        qs = super().filter_queryset(queryset)
+        date_value = self.request.query_params.get('date', '').strip()
+        date_from = self.request.query_params.get('date_from', '').strip()
+        date_to = self.request.query_params.get('date_to', '').strip()
+
+        if date_value:
+            parsed = parse_date(date_value)
+            if parsed:
+                return qs.filter(created_at__date=parsed)
+
+        if date_from:
+            parsed = parse_date(date_from)
+            if parsed:
+                qs = qs.filter(created_at__date__gte=parsed)
+        if date_to:
+            parsed = parse_date(date_to)
+            if parsed:
+                qs = qs.filter(created_at__date__lte=parsed)
+        return qs
 
     def perform_create(self, serializer):
         serializer.save(engineer=self.request.user.engineer_profile)
@@ -214,7 +236,6 @@ class ReportViewSet(viewsets.ModelViewSet):
             f"Log Date: {report.created_at.strftime('%Y-%m-%d %H:%M')}",
             "",
             f"Service Provider Code: {report.service_provider_code}",
-            f"Number Of Fans: {report.number_of_fans}",
             f"Serial Number: {report.serial_number}",
             f"Problem Identified: {report.problem_identified}",
             f"Action Taken: {report.action_taken}",

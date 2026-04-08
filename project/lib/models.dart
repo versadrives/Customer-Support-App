@@ -80,7 +80,6 @@ class ReportData {
     required this.ticketStartedAt,
     required this.ticketCompletedAt,
     required this.serviceProviderCode,
-    required this.numberOfFans,
     required this.serialNumber,
     required this.problemIdentified,
     required this.actionTaken,
@@ -100,7 +99,6 @@ class ReportData {
   final DateTime? ticketStartedAt;
   final DateTime? ticketCompletedAt;
   final String serviceProviderCode;
-  final int numberOfFans;
   final String serialNumber;
   final String problemIdentified;
   final String actionTaken;
@@ -121,7 +119,6 @@ class ReportData {
       ticketStartedAt: _parseDate(json['ticket_started_at']),
       ticketCompletedAt: _parseDate(json['ticket_completed_at']),
       serviceProviderCode: (json['service_provider_code'] ?? '') as String,
-      numberOfFans: (json['number_of_fans'] ?? 0) as int,
       serialNumber: (json['serial_number'] ?? '') as String,
       problemIdentified: (json['problem_identified'] ?? '') as String,
       actionTaken: (json['action_taken'] ?? '') as String,

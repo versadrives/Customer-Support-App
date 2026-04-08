@@ -139,7 +139,6 @@ class ApiClient {
 
   static Future<ReportData> completeTicket({
     required int ticketId,
-    required int numberOfFans,
     required String serialNumber,
     required String problemIdentified,
     required String actionTaken,
@@ -155,7 +154,6 @@ class ApiClient {
       headers: {'Content-Type': 'application/json', ...AuthStore.authHeaders()},
       body: jsonEncode({
         'service_provider_code': AuthStore.username ?? '',
-        'number_of_fans': numberOfFans,
         'serial_number': serialNumber,
         'problem_identified': problemIdentified,
         'action_taken': actionTaken,
@@ -173,8 +171,13 @@ class ApiClient {
     return ReportData.fromApi(jsonDecode(res.body) as Map<String, dynamic>);
   }
 
-  static Future<List<ReportData>> fetchReports() async {
-    final res = await http.get(_uri('/api/reports/'), headers: AuthStore.authHeaders());
+  static Future<List<ReportData>> fetchReports({String? date, String? dateFrom, String? dateTo}) async {
+    final params = <String, String>{};
+    if (date != null && date.isNotEmpty) params['date'] = date;
+    if (dateFrom != null && dateFrom.isNotEmpty) params['date_from'] = dateFrom;
+    if (dateTo != null && dateTo.isNotEmpty) params['date_to'] = dateTo;
+    final uri = params.isEmpty ? _uri('/api/reports/') : _uri('/api/reports/').replace(queryParameters: params);
+    final res = await http.get(uri, headers: AuthStore.authHeaders());
     if (res.statusCode != 200) {
       throw Exception('Failed to load reports (${res.statusCode})');
     }

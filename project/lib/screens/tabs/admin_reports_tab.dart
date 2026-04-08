@@ -87,8 +87,6 @@ class _AdminReportsTabState extends State<AdminReportsTab> {
                     const SizedBox(height: 4),
                     Text('Service Provider Code: ${r.serviceProviderCode}'),
                     const SizedBox(height: 4),
-                    Text('Number of Fans: ${r.numberOfFans}'),
-                    const SizedBox(height: 4),
                     Text('Serial Number: ${r.serialNumber}'),
                     const SizedBox(height: 4),
                     Text('Problem Identified: ${r.problemIdentified}'),

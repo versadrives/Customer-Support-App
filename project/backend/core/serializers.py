@@ -129,7 +129,6 @@ class ReportSerializer(serializers.ModelSerializer):
             'ticket_started_at',
             'ticket_completed_at',
             'service_provider_code',
-            'number_of_fans',
             'serial_number',
             'problem_identified',
             'action_taken',

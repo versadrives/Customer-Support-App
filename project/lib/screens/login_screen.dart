@@ -92,26 +92,28 @@ class _LoginScreenState extends State<LoginScreen> {
                     constraints: const BoxConstraints(maxWidth: 460),
                     child: Column(
                       children: [
-                        Container(
-                          width: 86,
-                          height: 86,
-                          decoration: BoxDecoration(
-                            color: const Color.fromARGB(255, 14, 97, 165),
-                            borderRadius: BorderRadius.circular(28),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color.fromARGB(255, 14, 97, 165).withValues(alpha: 0.32),
-                                blurRadius: 28,
-                                offset: const Offset(0, 12),
-                              )
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: SizedBox(
+                            width: 60,
+                            height: 60,
+                            child: Image.asset(
+                              'assets/images/logo.png',
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 0),
+                        Transform.translate(
+                          offset: const Offset(0, -1),
+                          child: Column(
+                            children: const [
+                              Text('Superfan', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w700)),
+                              SizedBox(height: 6),
+                              Text('Field service management application', style: TextStyle(color: Color(0xFF5A7485))),
                             ],
                           ),
-                          child: const Icon(Icons.engineering, color: Colors.white, size: 44),
                         ),
-                        const SizedBox(height: 16),
-                        const Text('Superfan', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w700)),
-                        const SizedBox(height: 6),
-                        const Text('Field service management application', style: TextStyle(color: Color(0xFF5A7485))),
                         const SizedBox(height: 14),
                         const SizedBox(height: 22),
                         Container(
@@ -173,6 +175,21 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 10,
+                child: Center(
+                  child: Text(
+                    'VisAi Appliances Private Limited @2026',
+                    style: TextStyle(
+                      color: Color(0xFF5A7485).withValues(alpha: 0.5),
+                      fontSize: 12,
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -180,4 +197,3 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
-

@@ -1,7 +1,10 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
 import '../../api/api_client.dart';
 import '../../models.dart';
+import '../../utils/download_helper.dart';
 
 class EngineerReportsTab extends StatefulWidget {
   const EngineerReportsTab({super.key, required this.engineerName});
@@ -13,6 +16,7 @@ class EngineerReportsTab extends StatefulWidget {
 
 class _EngineerReportsTabState extends State<EngineerReportsTab> {
   late Future<List<ReportData>> _future;
+  DateTime _selectedDate = DateTime.now();
 
   String _fmt(DateTime? value) {
     if (value == null) return '-';
@@ -20,15 +24,94 @@ class _EngineerReportsTabState extends State<EngineerReportsTab> {
     return '${v.year}-${v.month.toString().padLeft(2, '0')}-${v.day.toString().padLeft(2, '0')} ${v.hour.toString().padLeft(2, '0')}:${v.minute.toString().padLeft(2, '0')}';
   }
 
+  String _fmtDate(DateTime value) {
+    final v = value.toLocal();
+    return '${v.year}-${v.month.toString().padLeft(2, '0')}-${v.day.toString().padLeft(2, '0')}';
+  }
+
   @override
   void initState() {
     super.initState();
-    _future = ApiClient.fetchReports();
+    _future = ApiClient.fetchReports(date: _fmtDate(_selectedDate));
   }
 
   Future<void> _refresh() async {
-    setState(() => _future = ApiClient.fetchReports());
+    setState(() => _future = ApiClient.fetchReports(date: _fmtDate(_selectedDate)));
     await _future;
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2023),
+      lastDate: DateTime.now(),
+    );
+    if (picked == null) return;
+    setState(() {
+      _selectedDate = picked;
+      _future = ApiClient.fetchReports(date: _fmtDate(_selectedDate));
+    });
+  }
+
+  String _toCsv(List<ReportData> reports) {
+    final header = [
+      'Log Date',
+      'Service Provider Code',
+      'Ticket No',
+      'Attended By',
+      'Serial No',
+      'Problem Identified',
+      'Action Taken',
+      'PCB Board',
+      'Comments',
+      'Charges',
+      'KM Driven',
+      'Customer Polite',
+      'Difficult To Attend',
+    ];
+    final rows = reports.map((r) {
+      return [
+        _fmt(r.createdAt),
+        r.serviceProviderCode,
+        r.ticketId,
+        r.engineerName,
+        r.serialNumber,
+        r.problemIdentified,
+        r.actionTaken,
+        r.pcbBoardNumber,
+        r.comments,
+        r.chargesCollected,
+        '${r.kmsDriven}',
+        r.isCustomerPolite ? 'Yes' : 'No',
+        r.difficultToAttend ? 'Yes' : 'No',
+      ];
+    }).toList();
+
+    String esc(String v) => '"${v.replaceAll('"', '""')}"';
+    final lines = <String>[
+      header.map(esc).join(','),
+      ...rows.map((r) => r.map((v) => esc(v)).join(',')),
+    ];
+    return lines.join('\n');
+  }
+
+  Future<void> _export(List<ReportData> reports) async {
+    if (reports.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No reports to export.')));
+      return;
+    }
+    try {
+      final csv = _toCsv(reports);
+      final bytes = Uint8List.fromList(csv.codeUnits);
+      final filename = 'reports_${_fmtDate(_selectedDate)}.csv';
+      await downloadBytes(bytes, filename);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Saved to Downloads: $filename')));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export failed. $e')));
+    }
   }
 
   @override
@@ -54,9 +137,21 @@ class _EngineerReportsTabState extends State<EngineerReportsTab> {
               const SizedBox(height: 4),
               const Text('Compact table view for quick scanning.', style: TextStyle(color: Color(0xFF6B7B8A))),
               const SizedBox(height: 10),
-              Align(
-                alignment: Alignment.centerRight,
-                child: IconButton(onPressed: _refresh, icon: const Icon(Icons.refresh)),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: _pickDate,
+                    icon: const Icon(Icons.date_range),
+                    label: Text(_fmtDate(_selectedDate)),
+                  ),
+                  Row(
+                    children: [
+                      IconButton(tooltip: 'Refresh', onPressed: _refresh, icon: const Icon(Icons.refresh)),
+                      IconButton(tooltip: 'Export CSV', onPressed: () => _export(myReports), icon: const Icon(Icons.download)),
+                    ],
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
               Container(
@@ -76,7 +171,6 @@ class _EngineerReportsTabState extends State<EngineerReportsTab> {
                       DataColumn(label: Text('Service Provider Code')),
                       DataColumn(label: Text('Ticket No')),
                       DataColumn(label: Text('Attended By')),
-                      DataColumn(label: Text('No. of Fans')),
                       DataColumn(label: Text('Serial No')),
                       DataColumn(label: Text('Problem Identified')),
                       DataColumn(label: Text('Action Taken')),
@@ -96,7 +190,6 @@ class _EngineerReportsTabState extends State<EngineerReportsTab> {
                             DataCell(Text(myReports[i].serviceProviderCode)),
                             DataCell(Text(myReports[i].ticketId)),
                             DataCell(Text(myReports[i].engineerName)),
-                            DataCell(Text('${myReports[i].numberOfFans}')),
                             DataCell(Text(myReports[i].serialNumber)),
                             DataCell(Text(myReports[i].problemIdentified)),
                             DataCell(Text(myReports[i].actionTaken)),
