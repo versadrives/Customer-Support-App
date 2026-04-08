@@ -24,3 +24,6 @@ urlpatterns = [
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# Temporary: serve media files in production (remove when web server is configured)
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
