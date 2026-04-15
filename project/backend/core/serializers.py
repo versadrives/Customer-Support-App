@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 
-from .models import AdminProfile, Customer, EngineerProfile, Report, Ticket
+from .models import AdminProfile, Customer, EngineerProfile, Report, Ticket, TicketServiceType
 
 
 class UserSummarySerializer(serializers.ModelSerializer):
@@ -91,6 +91,7 @@ class TicketSerializer(serializers.ModelSerializer):
             'mfg_date',
             'location',
             'issue',
+            'service_type',
             'status',
             'assigned_engineer',
             'assigned_engineer_name',
@@ -108,6 +109,14 @@ class TicketSerializer(serializers.ModelSerializer):
         if not obj.assigned_engineer:
             return ''
         return obj.assigned_engineer.display_name
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        service_type = attrs.get('service_type', getattr(self.instance, 'service_type', TicketServiceType.ONSITE))
+        assigned_engineer = attrs.get('assigned_engineer', getattr(self.instance, 'assigned_engineer', None))
+        if service_type == TicketServiceType.REPLACEMENT and assigned_engineer:
+            raise serializers.ValidationError({'assigned_engineer': 'Replacement tickets cannot be assigned to an engineer.'})
+        return attrs
 
 
 class ReportSerializer(serializers.ModelSerializer):

@@ -1,0 +1,148 @@
+{% extends "panel/base.html" %}
+
+{% block content %}
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <strong>Replacement {{ ticket.ticket_id }}</strong>
+      <a class="btn" href="{% url 'panel:panel_replacements' %}">Back</a>
+    </div>
+    {% if form.errors %}
+      <div class="card" style="margin-top:12px;border:1px solid #f5c2c7;background:#f8d7da;color:#842029;">
+        <strong>We couldn't save this replacement.</strong>
+        <div style="margin-top:6px;">Please fix the highlighted fields and try again.</div>
+      </div>
+    {% endif %}
+
+    <div class="grid cols-3" style="margin-top:12px;">
+      <div class="card" style="box-shadow:none;border:1px dashed var(--border);">
+        <div style="font-weight:600;margin-bottom:8px;">Ticket</div>
+        <div><strong>{{ ticket.ticket_id }}</strong></div>
+        <div class="muted" style="margin-top:6px;">Issue: {{ ticket.issue|default:"-" }}</div>
+        <div class="muted">Model: {{ ticket.model|default:"-" }}</div>
+        <div class="muted">Serial: {{ ticket.serial_number|default:"-" }}</div>
+      </div>
+      <div class="card" style="box-shadow:none;border:1px dashed var(--border);">
+        <div style="font-weight:600;margin-bottom:8px;">Customer</div>
+        <div><strong>{{ ticket.customer.name|default:"-" }}</strong></div>
+        <div class="muted" style="margin-top:6px;">Contact: {{ ticket.customer.contact_name|default:ticket.customer.name }}</div>
+        <div class="muted">Phone: {{ ticket.customer.contact_phone|default:"-" }}</div>
+      </div>
+      <div class="card" style="box-shadow:none;border:1px dashed var(--border);">
+        <div style="font-weight:600;margin-bottom:8px;">Location</div>
+        <div>{{ ticket.location|default:"-" }}</div>
+        <div class="muted" style="margin-top:6px;">Address: {{ ticket.customer.address|default:"-" }}</div>
+      </div>
+    </div>
+
+    <form method="post" style="margin-top:12px;">
+      {% csrf_token %}
+
+      <div class="card" style="box-shadow:none;border:1px dashed var(--border);">
+        <div style="font-weight:600;margin-bottom:10px;">Challan Details</div>
+        <div class="grid cols-3">
+          <div>
+            <label>Subject</label>
+            {{ form.subject }}
+          </div>
+          <div>
+            <label>Ref Date</label>
+            {{ form.ref_date }}
+          </div>
+          <div>
+            <label>Client Ref Date</label>
+            {{ form.client_ref_date }}
+          </div>
+          <div>
+            <label>Ref Number</label>
+            {{ form.ref_number }}
+          </div>
+          <div>
+            <label>Custom Challan Number</label>
+            {{ form.custom_challan_number }}
+          </div>
+          <div>
+            <label>Client Ref Number</label>
+            {{ form.client_ref_number }}
+          </div>
+          <div>
+            <label>Organization Name</label>
+            {{ form.organization_name }}
+          </div>
+          <div>
+            <label>Contact Name</label>
+            {{ form.contact_name }}
+          </div>
+          <div>
+            <label>Contact Phone</label>
+            {{ form.contact_phone }}
+          </div>
+          <div>
+            <label>Status</label>
+            {{ form.status }}
+          </div>
+          <div>
+            <label>Category</label>
+            {{ form.category }}
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:14px;box-shadow:none;border:1px dashed var(--border);">
+        <div style="font-weight:600;margin-bottom:10px;">Address Details</div>
+        <div class="grid cols-3">
+          <div>
+            <label>Billing City</label>
+            {{ form.billing_city }}
+          </div>
+          <div>
+            <label>Billing State</label>
+            {{ form.billing_state }}
+          </div>
+          <div>
+            <label>Billing Country</label>
+            {{ form.billing_country }}
+          </div>
+          <div>
+            <label>Billing Address</label>
+            {{ form.billing_address }}
+          </div>
+          <div>
+            <label>Billing Postal Code</label>
+            {{ form.billing_postal_code }}
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:14px;box-shadow:none;border:1px dashed var(--border);">
+        <div style="font-weight:600;margin-bottom:10px;">Item Details</div>
+        <div class="grid cols-3">
+          <div>
+            <label>Item Name</label>
+            {{ form.item_name }}
+          </div>
+          <div>
+            <label>Quantity</label>
+            {{ form.quantity }}
+          </div>
+          <div>
+            <label>Currency</label>
+            {{ form.currency }}
+          </div>
+          <div>
+            <label>Tax Mode</label>
+            {{ form.tax_mode }}
+          </div>
+          <div style="grid-column: span 2;">
+            <label>Item Description</label>
+            {{ form.item_description }}
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:16px;display:flex;gap:10px;">
+        <button class="btn primary" type="submit">Save</button>
+        <a class="btn" href="{% url 'panel:panel_replacements' %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+{% endblock %}

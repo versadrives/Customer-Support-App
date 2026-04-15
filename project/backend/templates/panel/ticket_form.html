@@ -24,14 +24,23 @@
             <div>
               <label>Customer name</label>
               {{ form.customer_name }}
+              {% if form.customer_name.errors %}
+                <div class="field-help" style="color:#b42318;">{{ form.customer_name.errors|join:", " }}</div>
+              {% endif %}
             </div>
             <div>
               <label>Phone number</label>
               {{ form.customer_phone }}
+              {% if form.customer_phone.errors %}
+                <div class="field-help" style="color:#b42318;">{{ form.customer_phone.errors|join:", " }}</div>
+              {% endif %}
             </div>
             <div>
               <label>Address</label>
               {{ form.customer_address }}
+              {% if form.customer_address.errors %}
+                <div class="field-help" style="color:#b42318;">{{ form.customer_address.errors|join:", " }}</div>
+              {% endif %}
             </div>
           </div>
         </div>
@@ -41,26 +50,67 @@
             <div>
               <label>Ticket ID</label>
               {{ form.ticket_id }}
+              {% if form.ticket_id.errors %}
+                <div class="field-help" style="color:#b42318;">{{ form.ticket_id.errors|join:", " }}</div>
+              {% endif %}
             </div>
             <div>
               <label>Location</label>
               {{ form.location }}
+              {% if form.location.errors %}
+                <div class="field-help" style="color:#b42318;">{{ form.location.errors|join:", " }}</div>
+              {% endif %}
             </div>
             <div>
-              <label>Issue</label>
-              {{ form.issue }}
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;">
+                <label style="margin-bottom:0;">Issue</label>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                  <button class="btn" type="button" id="add-issue-option-btn" title="Add issue option" aria-label="Add issue option" style="width:32px;height:32px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:18px;line-height:1;">+</button>
+                  <button class="btn" type="button" id="remove-issue-option-btn" title="Remove selected issue option" aria-label="Remove selected issue option" style="width:32px;height:32px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:18px;line-height:1;">x</button>
+                </div>
+              </div>
+              {{ form.issue_choice }}
+              {% if form.issue_choice.errors %}
+                <div class="field-help" style="color:#b42318;">{{ form.issue_choice.errors|join:", " }}</div>
+              {% endif %}
+              <div id="issue-option-feedback" class="field-help"></div>
+            </div>
+            <div>
+              <label>Other Issue</label>
+              {{ form.issue_custom }}
+              <div class="field-help">Use this when the issue is not in the dropdown.</div>
+              {% if form.issue_custom.errors %}
+                <div class="field-help" style="color:#b42318;">{{ form.issue_custom.errors|join:", " }}</div>
+              {% endif %}
+            </div>
+            <div>
+              <label>Service Type</label>
+              {{ form.service_type }}
+              <div class="field-help">Replacement tickets stay unassigned.</div>
+              {% if form.service_type.errors %}
+                <div class="field-help" style="color:#b42318;">{{ form.service_type.errors|join:", " }}</div>
+              {% endif %}
             </div>
             <div>
               <label>Model</label>
               {{ form.model }}
+              {% if form.model.errors %}
+                <div class="field-help" style="color:#b42318;">{{ form.model.errors|join:", " }}</div>
+              {% endif %}
             </div>
             <div>
               <label>Serial Number</label>
               {{ form.serial_number }}
+              {% if form.serial_number.errors %}
+                <div class="field-help" style="color:#b42318;">{{ form.serial_number.errors|join:", " }}</div>
+              {% endif %}
             </div>
             <div>
               <label>MFG Date</label>
               {{ form.mfg_date }}
+              {% if form.mfg_date.errors %}
+                <div class="field-help" style="color:#b42318;">{{ form.mfg_date.errors|join:", " }}</div>
+              {% endif %}
             </div>
           </div>
         </div>
@@ -70,6 +120,9 @@
             <div>
               <label>Assigned Engineer</label>
               {{ form.assigned_engineer }}
+              {% if form.assigned_engineer.errors %}
+                <div class="field-help" style="color:#b42318;">{{ form.assigned_engineer.errors|join:", " }}</div>
+              {% endif %}
             </div>
           </div>
         </div>
@@ -80,4 +133,134 @@
       </div>
     </form>
   </div>
+  <script>
+    (function () {
+      var form = document.querySelector("form");
+      if (!form) return;
+
+      var csrfTokenInput = form.querySelector("input[name='csrfmiddlewaretoken']");
+      var issueSelect = document.getElementById("id_issue_choice");
+      var issueCustomInput = document.getElementById("id_issue_custom");
+      var serviceTypeSelect = document.getElementById("id_service_type");
+      var engineerSelect = document.getElementById("id_assigned_engineer");
+      var addButton = document.getElementById("add-issue-option-btn");
+      var removeButton = document.getElementById("remove-issue-option-btn");
+      var feedback = document.getElementById("issue-option-feedback");
+
+      function setFeedback(message, isError) {
+        feedback.textContent = message || "";
+        feedback.style.color = isError ? "#b42318" : "var(--muted)";
+      }
+
+      function syncIssueCustomVisibility() {
+        if (!issueSelect || !issueCustomInput) return;
+        var showCustom = issueSelect.value === "__other__";
+        issueCustomInput.disabled = !showCustom;
+        if (!showCustom && issueSelect.value) {
+          issueCustomInput.value = "";
+        }
+      }
+
+      function syncAssignmentAvailability() {
+        if (!serviceTypeSelect || !engineerSelect) return;
+        var isReplacement = serviceTypeSelect.value === "REPLACEMENT";
+        engineerSelect.disabled = isReplacement;
+        if (isReplacement) {
+          engineerSelect.value = "";
+        }
+      }
+
+      function getSelectedIssueOption() {
+        if (!issueSelect) return null;
+        var option = issueSelect.options[issueSelect.selectedIndex];
+        if (!option) return null;
+        if (!option.value || option.value === "__other__") return null;
+        return option;
+      }
+
+      async function postData(url, body) {
+        var response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "X-CSRFToken": csrfTokenInput ? csrfTokenInput.value : "",
+          },
+          body: body,
+        });
+        var data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.detail || "Request failed.");
+        }
+        return data;
+      }
+
+      if (issueSelect) {
+        issueSelect.addEventListener("change", syncIssueCustomVisibility);
+        syncIssueCustomVisibility();
+      }
+      if (serviceTypeSelect) {
+        serviceTypeSelect.addEventListener("change", syncAssignmentAvailability);
+        syncAssignmentAvailability();
+      }
+
+      if (addButton) {
+        addButton.addEventListener("click", async function () {
+          var name = window.prompt("Enter the new issue option:");
+          name = (name || "").trim();
+          if (!name) {
+            setFeedback("Issue option was not added.", true);
+            return;
+          }
+          addButton.disabled = true;
+          setFeedback("Saving option...", false);
+          try {
+            var data = await postData("/panel/tickets/issues/add/", "name=" + encodeURIComponent(name));
+            var existing = Array.from(issueSelect.options).find(function (option) {
+              return option.value === data.name;
+            });
+            if (!existing) {
+              var otherOption = issueSelect.querySelector("option[value='__other__']");
+              var option = new Option(data.name, data.name, true, true);
+              if (otherOption) {
+                issueSelect.insertBefore(option, otherOption);
+              } else {
+                issueSelect.add(option);
+              }
+            } else {
+              existing.selected = true;
+            }
+            syncIssueCustomVisibility();
+            setFeedback("Issue option saved.", false);
+          } catch (error) {
+            setFeedback(error.message, true);
+          } finally {
+            addButton.disabled = false;
+          }
+        });
+      }
+
+      if (removeButton) {
+        removeButton.addEventListener("click", async function () {
+          var selected = getSelectedIssueOption();
+          if (!selected) {
+            setFeedback("Select a saved issue option to remove.", true);
+            return;
+          }
+          removeButton.disabled = true;
+          setFeedback("Removing option...", false);
+          try {
+            await postData("/panel/tickets/issues/remove/", "name=" + encodeURIComponent(selected.value));
+            selected.remove();
+            issueSelect.value = "";
+            syncIssueCustomVisibility();
+            setFeedback("Issue option removed.", false);
+          } catch (error) {
+            setFeedback(error.message, true);
+          } finally {
+            removeButton.disabled = false;
+          }
+        });
+      }
+    })();
+  </script>
 {% endblock %}

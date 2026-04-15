@@ -9,7 +9,7 @@ from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import Customer, EngineerProfile, Report, Ticket, TicketStatus
+from .models import Customer, EngineerProfile, Report, Ticket, TicketServiceType, TicketStatus
 from .permissions import IsAdmin, IsAdminOrEngineer, IsEngineer
 from .serializers import CustomerSerializer, EngineerProfileSerializer, ReportSerializer, TicketSerializer
 
@@ -59,7 +59,14 @@ class TicketViewSet(viewsets.ModelViewSet):
         return qs.none()
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+        service_type = serializer.validated_data.get('service_type', TicketServiceType.ONSITE)
+        assigned_engineer = serializer.validated_data.get('assigned_engineer')
+        status_value = TicketStatus.ASSIGNED if assigned_engineer and service_type == TicketServiceType.ONSITE else TicketStatus.OPEN
+        serializer.save(
+            created_by=self.request.user,
+            assigned_engineer=assigned_engineer if service_type == TicketServiceType.ONSITE else None,
+            status=status_value,
+        )
 
     def create(self, request, *args, **kwargs):
         data = request.data.copy()
@@ -98,12 +105,18 @@ class TicketViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         previous = self.get_object()
         updated = serializer.save()
+        if updated.service_type == TicketServiceType.REPLACEMENT and updated.assigned_engineer:
+            updated.assigned_engineer = None
+        if updated.assigned_engineer and updated.status == TicketStatus.OPEN:
+            updated.status = TicketStatus.ASSIGNED
         if previous.assigned_engineer != updated.assigned_engineer and updated.assigned_engineer and not updated.assigned_at:
             updated.assigned_at = timezone.now()
         if updated.status == TicketStatus.IN_PROGRESS and not updated.started_at:
             updated.started_at = timezone.now()
         if updated.status == TicketStatus.COMPLETED and not updated.completed_at:
             updated.completed_at = timezone.now()
+        if not updated.assigned_engineer and updated.status == TicketStatus.ASSIGNED:
+            updated.status = TicketStatus.OPEN
         updated.save()
 
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])

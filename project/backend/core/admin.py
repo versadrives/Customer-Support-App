@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 import csv
 
 from .admin_site import admin_site
-from .models import AdminProfile, Customer, EngineerProfile, Report, Ticket
+from .models import AdminProfile, Customer, EngineerProfile, IssueOption, Replacement, Report, Ticket, TicketServiceType
 
 
 def export_reports_pdf(modeladmin, request, queryset):
@@ -259,14 +259,22 @@ class TicketAdminForm(forms.ModelForm):
                 customer.address = customer_address
             customer.save()
             self.instance.customer = customer
+        if self.cleaned_data.get('service_type') == TicketServiceType.REPLACEMENT:
+            self.instance.assigned_engineer = None
         return super().save(commit=commit)
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get('service_type') == TicketServiceType.REPLACEMENT and cleaned.get('assigned_engineer'):
+            raise ValidationError('Replacement tickets cannot be assigned to an engineer.')
+        return cleaned
 
 
 class TicketAdmin(admin.ModelAdmin):
     form = TicketAdminForm
-    list_display = ('ticket_id', 'customer', 'model', 'serial_number', 'mfg_date', 'status', 'assigned_engineer', 'created_by', 'created_at')
+    list_display = ('ticket_id', 'customer', 'service_type', 'model', 'serial_number', 'mfg_date', 'status', 'assigned_engineer', 'created_by', 'created_at')
     search_fields = ('ticket_id', 'customer__name', 'assigned_engineer__user__username')
-    list_filter = ('status', 'assigned_engineer', 'customer', 'created_at')
+    list_filter = ('service_type', 'status', 'assigned_engineer', 'customer', 'created_at')
     date_hierarchy = 'created_at'
     readonly_fields = ('created_at', 'started_at', 'completed_at', 'qr_code')
     fields = (
@@ -276,12 +284,25 @@ class TicketAdmin(admin.ModelAdmin):
         'customer_address',
         'location',
         'issue',
+        'service_type',
         'model',
         'serial_number',
         'mfg_date',
         'status',
         'assigned_engineer',
     )
+
+
+class IssueOptionAdmin(admin.ModelAdmin):
+    list_display = ('name', 'active', 'created_at')
+    search_fields = ('name',)
+    list_filter = ('active',)
+
+
+class ReplacementAdmin(admin.ModelAdmin):
+    list_display = ('ticket', 'contact_name', 'contact_phone', 'item_name', 'quantity', 'status', 'updated_at')
+    search_fields = ('ticket__ticket_id', 'contact_name', 'contact_phone', 'organization_name', 'item_name')
+    list_filter = ('status', 'currency', 'tax_mode', 'updated_at')
 
 
 class ReportAdmin(admin.ModelAdmin):
@@ -308,4 +329,6 @@ class ReportAdmin(admin.ModelAdmin):
 admin_site.register(AdminProfile, AdminProfileAdmin)
 admin_site.register(EngineerProfile, EngineerProfileAdmin)
 admin_site.register(Ticket, TicketAdmin)
+admin_site.register(IssueOption, IssueOptionAdmin)
+admin_site.register(Replacement, ReplacementAdmin)
 admin_site.register(Report, ReportAdmin)

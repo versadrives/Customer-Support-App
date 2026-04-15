@@ -45,6 +45,23 @@ class TicketStatus(models.TextChoices):
     COMPLETED = 'COMPLETED', 'Completed'
 
 
+class TicketServiceType(models.TextChoices):
+    ONSITE = 'ONSITE', 'Onsite'
+    REPLACEMENT = 'REPLACEMENT', 'Replacement'
+
+
+class IssueOption(models.Model):
+    name = models.CharField(max_length=120, unique=True)
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ('name',)
+
+    def __str__(self) -> str:
+        return self.name
+
+
 class Ticket(models.Model):
     ticket_id = models.CharField(max_length=30, unique=True)
     customer = models.ForeignKey(Customer, on_delete=models.PROTECT, related_name='tickets')
@@ -53,6 +70,7 @@ class Ticket(models.Model):
     model = models.CharField(max_length=120, blank=True)
     serial_number = models.CharField(max_length=120, blank=True)
     mfg_date = models.DateField(null=True, blank=True)
+    service_type = models.CharField(max_length=20, choices=TicketServiceType.choices, default=TicketServiceType.ONSITE)
     status = models.CharField(max_length=20, choices=TicketStatus.choices, default=TicketStatus.OPEN)
     assigned_engineer = models.ForeignKey(EngineerProfile, on_delete=models.SET_NULL, null=True, blank=True, related_name='tickets')
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_tickets')
@@ -64,6 +82,46 @@ class Ticket(models.Model):
 
     def __str__(self) -> str:
         return self.ticket_id
+
+
+class ReplacementStatus(models.TextChoices):
+    DRAFT = 'DRAFT', 'Draft'
+    READY = 'READY', 'Ready'
+    DISPATCHED = 'DISPATCHED', 'Dispatched'
+    COMPLETED = 'COMPLETED', 'Completed'
+
+
+class Replacement(models.Model):
+    ticket = models.OneToOneField(Ticket, on_delete=models.CASCADE, related_name='replacement')
+    subject = models.CharField(max_length=150, blank=True)
+    ref_date = models.DateField(null=True, blank=True)
+    client_ref_date = models.DateField(null=True, blank=True)
+    ref_number = models.CharField(max_length=80, blank=True)
+    custom_challan_number = models.CharField(max_length=80, blank=True)
+    client_ref_number = models.CharField(max_length=80, blank=True)
+    organization_name = models.CharField(max_length=120, blank=True)
+    contact_name = models.CharField(max_length=120, blank=True)
+    contact_phone = models.CharField(max_length=30, blank=True)
+    category = models.CharField(max_length=120, blank=True)
+    billing_city = models.CharField(max_length=120, blank=True)
+    billing_state = models.CharField(max_length=120, blank=True)
+    billing_country = models.CharField(max_length=120, blank=True)
+    billing_address = models.TextField(blank=True)
+    billing_postal_code = models.CharField(max_length=20, blank=True)
+    item_name = models.CharField(max_length=150, blank=True)
+    item_description = models.TextField(blank=True)
+    quantity = models.PositiveIntegerField(default=1)
+    currency = models.CharField(max_length=40, default='India, Rupees')
+    tax_mode = models.CharField(max_length=40, default='Group')
+    status = models.CharField(max_length=20, choices=ReplacementStatus.choices, default=ReplacementStatus.DRAFT)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ('-updated_at', '-created_at')
+
+    def __str__(self) -> str:
+        return f'Replacement {self.ticket.ticket_id}'
 
 
 class Report(models.Model):

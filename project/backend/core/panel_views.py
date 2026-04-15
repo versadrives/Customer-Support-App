@@ -1,14 +1,14 @@
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import redirect, render
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.http import HttpResponse
 from django.utils.dateparse import parse_date
 from django.utils import timezone
 import csv
 
-from .models import AdminProfile, Customer, EngineerProfile, Report, Ticket, TicketStatus
-from .panel_forms import PanelEngineerForm, PanelLoginForm, PanelTicketForm, PanelTicketStatusForm
+from .models import AdminProfile, Customer, EngineerProfile, IssueOption, Replacement, Report, Ticket, TicketServiceType, TicketStatus
+from .panel_forms import PanelEngineerForm, PanelLoginForm, PanelReplacementForm, PanelTicketForm, PanelTicketStatusForm
 
 
 def _require_staff(user):
@@ -48,6 +48,7 @@ def panel_index(request):
             "assigned": tickets_today.filter(status=TicketStatus.ASSIGNED).count(),
             "in_progress": tickets_today.filter(status=TicketStatus.IN_PROGRESS).count(),
             "completed": tickets_today.filter(status=TicketStatus.COMPLETED).count(),
+            "replacements": tickets_today.filter(service_type=TicketServiceType.REPLACEMENT).count(),
             "engineers": EngineerProfile.objects.count(),
             "customers": Customer.objects.count(),
             "reports": Report.objects.count(),
@@ -143,6 +144,50 @@ def panel_ticket_create(request):
 
 
 @login_required(login_url="/panel/login/")
+def panel_issue_option_create(request):
+    if not request.user.is_staff:
+        return JsonResponse({"detail": "Forbidden."}, status=403)
+    if request.method != "POST":
+        return JsonResponse({"detail": "Method not allowed."}, status=405)
+
+    name = (request.POST.get("name") or "").strip()
+    if not name:
+        return JsonResponse({"detail": "Issue name is required."}, status=400)
+    name = name[0].upper() + name[1:] if name else name
+
+    option, created = IssueOption.objects.get_or_create(name=name)
+    if not created and not option.active:
+        option.active = True
+        option.save(update_fields=["active"])
+
+    return JsonResponse(
+        {
+            "id": option.id,
+            "name": option.name,
+            "created": created,
+        }
+    )
+
+
+@login_required(login_url="/panel/login/")
+def panel_issue_option_delete(request):
+    if not request.user.is_staff:
+        return JsonResponse({"detail": "Forbidden."}, status=403)
+    if request.method != "POST":
+        return JsonResponse({"detail": "Method not allowed."}, status=405)
+
+    name = (request.POST.get("name") or "").strip()
+    if not name:
+        return JsonResponse({"detail": "Issue name is required."}, status=400)
+    name = name[0].upper() + name[1:] if name else name
+
+    option = get_object_or_404(IssueOption, name=name)
+    option.active = False
+    option.save(update_fields=["active"])
+    return JsonResponse({"deleted": True, "id": option.id, "name": option.name})
+
+
+@login_required(login_url="/panel/login/")
 def panel_engineers(request):
     if not request.user.is_staff:
         return redirect("panel:panel_login")
@@ -166,6 +211,58 @@ def panel_engineer_create(request):
         form.save()
         return redirect("panel:panel_engineers")
     return render(request, "panel/engineer_form.html", {"form": form, "page_title": "Add Engineer"})
+
+
+@login_required(login_url="/panel/login/")
+def panel_replacements(request):
+    if not request.user.is_staff:
+        return redirect("panel:panel_login")
+
+    def _get_replacement(ticket):
+        try:
+            return ticket.replacement
+        except Replacement.DoesNotExist:
+            return None
+
+    tickets = (
+        Ticket.objects.select_related("customer")
+        .filter(service_type=TicketServiceType.REPLACEMENT)
+        .order_by("-created_at")
+    )
+    replacements = [{"ticket": ticket, "replacement": _get_replacement(ticket)} for ticket in tickets]
+    return render(
+        request,
+        "panel/replacements.html",
+        {
+            "replacements": replacements,
+            "page_title": "Replacement",
+        },
+    )
+
+
+@login_required(login_url="/panel/login/")
+def panel_replacement_edit(request, ticket_id):
+    if not request.user.is_staff:
+        return redirect("panel:panel_login")
+    ticket = Ticket.objects.select_related("customer").get(id=ticket_id, service_type=TicketServiceType.REPLACEMENT)
+    try:
+        replacement = ticket.replacement
+    except Replacement.DoesNotExist:
+        replacement = Replacement(ticket=ticket)
+    form = PanelReplacementForm(request.POST or None, instance=replacement, ticket=ticket)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        return redirect("panel:panel_replacements")
+    return render(
+        request,
+        "panel/replacement_form.html",
+        {
+            "form": form,
+            "ticket": ticket,
+            "replacement": replacement,
+            "page_title": "Replacement",
+        },
+    )
 
 
 @login_required(login_url="/panel/login/")

@@ -1,0 +1,46 @@
+{% extends "panel/base.html" %}
+
+{% block content %}
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <strong>Replacement</strong>
+      <span class="muted">Replacement tickets and challan details</span>
+    </div>
+    <div style="margin-top:12px;overflow:auto;">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Ticket</th>
+            <th>Customer</th>
+            <th>Phone</th>
+            <th>Item</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in replacements %}
+            <tr>
+              <td>{{ row.ticket.ticket_id }}</td>
+              <td>{{ row.ticket.customer.name|default:"-" }}</td>
+              <td>{{ row.ticket.customer.contact_phone|default:"-" }}</td>
+              <td>{{ row.ticket.model|default:"-" }}</td>
+              <td>
+                {% if row.replacement %}
+                  {{ row.replacement.get_status_display }}
+                {% else %}
+                  Draft
+                {% endif %}
+              </td>
+              <td>{{ row.ticket.created_at|date:"Y-m-d H:i" }}</td>
+              <td><a class="btn" href="{% url 'panel:panel_replacement_edit' row.ticket.id %}">Open</a></td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="7" class="muted">No replacement tickets found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}

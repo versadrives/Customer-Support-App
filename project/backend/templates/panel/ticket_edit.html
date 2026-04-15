@@ -26,6 +26,7 @@
         <div style="font-weight:600;margin-bottom:8px;">Issue</div>
         <div>{{ ticket.issue|capfirst }}</div>
         <div class="muted" style="margin-top:6px;">Location: {{ ticket.location|capfirst }}</div>
+        <div class="muted">Service Type: {{ ticket.get_service_type_display }}</div>
       </div>
       <div class="card" style="box-shadow:none;border:1px dashed var(--border);">
         <div style="font-weight:600;margin-bottom:8px;">Equipment</div>
@@ -40,8 +41,18 @@
         <div style="font-weight:600;margin-bottom:10px;">Assignment</div>
         <div class="grid cols-3">
           <div>
+            <label>Service Type</label>
+            {{ form.service_type }}
+            {% if form.service_type.errors %}
+              <div class="field-help" style="color:#b42318;">{{ form.service_type.errors|join:", " }}</div>
+            {% endif %}
+          </div>
+          <div>
             <label>Assigned Engineer</label>
             {{ form.assigned_engineer }}
+            {% if form.assigned_engineer.errors %}
+              <div class="field-help" style="color:#b42318;">{{ form.assigned_engineer.errors|join:", " }}</div>
+            {% endif %}
           </div>
         </div>
       </div>
@@ -51,4 +62,22 @@
       </div>
     </form>
   </div>
+  <script>
+    (function () {
+      var serviceTypeSelect = document.getElementById("id_service_type");
+      var engineerSelect = document.getElementById("id_assigned_engineer");
+      if (!serviceTypeSelect || !engineerSelect) return;
+
+      function syncAssignmentAvailability() {
+        var isReplacement = serviceTypeSelect.value === "REPLACEMENT";
+        engineerSelect.disabled = isReplacement;
+        if (isReplacement) {
+          engineerSelect.value = "";
+        }
+      }
+
+      serviceTypeSelect.addEventListener("change", syncAssignmentAvailability);
+      syncAssignmentAvailability();
+    })();
+  </script>
 {% endblock %}
