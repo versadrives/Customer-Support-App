@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(DJANGO_SETTINGS_MODULE=support_backend.settings python -c \"import django; django.setup\\(\\); from core import panel_views; print\\('OK'\\)\")",
+      "Bash(DJANGO_SETTINGS_MODULE=support_backend.settings python -c \"import django; django.setup\\(\\); from core.admin import AdminProfileAdmin, EngineerProfileAdmin; print\\('OK'\\)\")",
+      "Bash(DJANGO_SETTINGS_MODULE=support_backend.settings python -c \"import django; django.setup\\(\\); from core.admin import admin_password_reset, _is_reset_locked_out; from core.middleware import SessionExpiryMiddleware; print\\('OK'\\)\")",
+      "Bash(flutter analyze *)",
+      "Bash(flutter pub *)"
+    ]
+  }
+}

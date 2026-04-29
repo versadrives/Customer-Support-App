@@ -21,7 +21,6 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -29,6 +28,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'core.middleware.SessionExpiryMiddleware',
 ]
 
 ROOT_URLCONF = 'support_backend.urls'
@@ -62,7 +62,7 @@ DATABASES = {
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', 'OPTIONS': {'min_length': 8}},
     {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
@@ -75,6 +75,9 @@ USE_TZ = True
 STATIC_URL = 'static/'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+REPLACEMENT_INVOICE_LOGO_DIR = BASE_DIR / 'invoice_assets' / 'logos'
+REPLACEMENT_INVOICE_HEADER_IMAGE = REPLACEMENT_INVOICE_LOGO_DIR / 'invoice_header.png'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -95,6 +98,19 @@ SIMPLE_JWT = {
 }
 
 # Feature flags for the admin panel UI.
-PANEL_SHOW_FILTERS = False
-PANEL_SHOW_ENGINEER_ADD = False
+PANEL_SHOW_FILTERS = True
+PANEL_SHOW_ENGINEER_ADD = True
 PANEL_SHOW_ADMIN_LINK = False
+
+# Panel login protection.
+PANEL_LOGIN_MAX_FAILURES = 5
+PANEL_LOGIN_LOCKOUT_SECONDS = 900
+PANEL_LOGIN_FAILURE_WINDOW_SECONDS = 900
+
+# Security settings.
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_AGE = 8 * 60 * 60  # 8 hours in seconds
+X_FRAME_OPTIONS = 'DENY'

@@ -62,6 +62,19 @@ class IssueOption(models.Model):
         return self.name
 
 
+class Item(models.Model):
+    name = models.CharField(max_length=150, unique=True)
+    description = models.TextField(blank=True)
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ('name',)
+
+    def __str__(self) -> str:
+        return self.name
+
+
 class Ticket(models.Model):
     ticket_id = models.CharField(max_length=30, unique=True)
     customer = models.ForeignKey(Customer, on_delete=models.PROTECT, related_name='tickets')
@@ -93,6 +106,7 @@ class ReplacementStatus(models.TextChoices):
 
 class Replacement(models.Model):
     ticket = models.OneToOneField(Ticket, on_delete=models.CASCADE, related_name='replacement')
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_replacements')
     subject = models.CharField(max_length=150, blank=True)
     ref_date = models.DateField(null=True, blank=True)
     client_ref_date = models.DateField(null=True, blank=True)
@@ -122,6 +136,40 @@ class Replacement(models.Model):
 
     def __str__(self) -> str:
         return f'Replacement {self.ticket.ticket_id}'
+
+    @property
+    def total_quantity(self) -> int:
+        quantities = self.line_items.values_list('quantity', flat=True)
+        return sum(quantities) if quantities else 0
+
+    @property
+    def items_summary(self) -> str:
+        names = [name for name in self.line_items.order_by('sort_order', 'id').values_list('item_name', flat=True) if name]
+        if names:
+            preview = ', '.join(names[:3])
+            if len(names) > 3:
+                preview = f'{preview} +{len(names) - 3} more'
+            return preview
+        if self.item_name:
+            return self.item_name
+        return ''
+
+
+class ReplacementLineItem(models.Model):
+    replacement = models.ForeignKey(Replacement, on_delete=models.CASCADE, related_name='line_items')
+    item_name = models.CharField(max_length=150)
+    item_description = models.TextField(blank=True)
+    quantity = models.PositiveIntegerField(default=1)
+    serial_number = models.CharField(max_length=120, blank=True)
+    sort_order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ('sort_order', 'id')
+
+    def __str__(self) -> str:
+        return f'{self.replacement.ticket.ticket_id} - {self.item_name}'
 
 
 class Report(models.Model):

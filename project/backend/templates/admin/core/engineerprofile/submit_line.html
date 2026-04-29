@@ -1,0 +1,9 @@
+{% extends "admin/base.html" %}
+{% load i18n %}
+
+{% block submit_line %}
+<div class="submit-row">
+  {% if show_reset_password %}<a href="{{ reset_password_url }}" class="button" style="color:#c0392b;font-weight:bold;float:left;">Reset Password</a>{% endif %}
+  {{ block.super }}
+</div>
+{% endblock %}

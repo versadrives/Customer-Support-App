@@ -4,12 +4,31 @@
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;">
       <strong>Replacement {{ ticket.ticket_id }}</strong>
-      <a class="btn" href="{% url 'panel:panel_replacements' %}">Back</a>
+      <div style="display:flex;gap:8px;">
+        {% if replacement.pk %}
+          <a class="btn" href="{% url 'panel:panel_replacement_invoice' ticket.id %}" target="_blank" rel="noopener">Invoice PDF</a>
+        {% endif %}
+        <a class="btn" href="{% url 'panel:panel_replacements' %}">Back</a>
+      </div>
     </div>
     {% if form.errors %}
       <div class="card" style="margin-top:12px;border:1px solid #f5c2c7;background:#f8d7da;color:#842029;">
         <strong>We couldn't save this replacement.</strong>
         <div style="margin-top:6px;">Please fix the highlighted fields and try again.</div>
+        {% if form.non_field_errors %}
+          <div style="margin-top:8px;">
+            {% for error in form.non_field_errors %}
+              <div>{{ error }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+        <div style="margin-top:8px;">
+          {% for field in form %}
+            {% if field.errors %}
+              <div><strong>{{ field.label }}:</strong> {{ field.errors|join:", " }}</div>
+            {% endif %}
+          {% endfor %}
+        </div>
       </div>
     {% endif %}
 
@@ -20,6 +39,7 @@
         <div class="muted" style="margin-top:6px;">Issue: {{ ticket.issue|default:"-" }}</div>
         <div class="muted">Model: {{ ticket.model|default:"-" }}</div>
         <div class="muted">Serial: {{ ticket.serial_number|default:"-" }}</div>
+        <div class="muted">Created By: {% if ticket.created_by %}{{ ticket.created_by.get_full_name|default:ticket.created_by.username }}{% else %}-{% endif %}</div>
       </div>
       <div class="card" style="box-shadow:none;border:1px dashed var(--border);">
         <div style="font-weight:600;margin-bottom:8px;">Customer</div>
@@ -31,6 +51,7 @@
         <div style="font-weight:600;margin-bottom:8px;">Location</div>
         <div>{{ ticket.location|default:"-" }}</div>
         <div class="muted" style="margin-top:6px;">Address: {{ ticket.customer.address|default:"-" }}</div>
+        <div class="muted">Replacement By: {% if replacement.created_by %}{{ replacement.created_by.get_full_name|default:replacement.created_by.username }}{% else %}-{% endif %}</div>
       </div>
     </div>
 
@@ -41,48 +62,53 @@
         <div style="font-weight:600;margin-bottom:10px;">Challan Details</div>
         <div class="grid cols-3">
           <div>
-            <label>Subject</label>
-            {{ form.subject }}
-          </div>
-          <div>
             <label>Ref Date</label>
             {{ form.ref_date }}
+            {% if form.ref_date.errors %}
+              <div class="field-help" style="color:#b42318;">{{ form.ref_date.errors|join:", " }}</div>
+            {% endif %}
           </div>
           <div>
             <label>Client Ref Date</label>
             {{ form.client_ref_date }}
+            {% if form.client_ref_date.errors %}
+              <div class="field-help" style="color:#b42318;">{{ form.client_ref_date.errors|join:", " }}</div>
+            {% endif %}
           </div>
           <div>
             <label>Ref Number</label>
             {{ form.ref_number }}
+            {% if form.ref_number.errors %}
+              <div class="field-help" style="color:#b42318;">{{ form.ref_number.errors|join:", " }}</div>
+            {% endif %}
           </div>
           <div>
             <label>Custom Challan Number</label>
             {{ form.custom_challan_number }}
+            {% if form.custom_challan_number.errors %}
+              <div class="field-help" style="color:#b42318;">{{ form.custom_challan_number.errors|join:", " }}</div>
+            {% endif %}
           </div>
           <div>
             <label>Client Ref Number</label>
             {{ form.client_ref_number }}
-          </div>
-          <div>
-            <label>Organization Name</label>
-            {{ form.organization_name }}
+            {% if form.client_ref_number.errors %}
+              <div class="field-help" style="color:#b42318;">{{ form.client_ref_number.errors|join:", " }}</div>
+            {% endif %}
           </div>
           <div>
             <label>Contact Name</label>
             {{ form.contact_name }}
+            {% if form.contact_name.errors %}
+              <div class="field-help" style="color:#b42318;">{{ form.contact_name.errors|join:", " }}</div>
+            {% endif %}
           </div>
           <div>
             <label>Contact Phone</label>
             {{ form.contact_phone }}
-          </div>
-          <div>
-            <label>Status</label>
-            {{ form.status }}
-          </div>
-          <div>
-            <label>Category</label>
-            {{ form.category }}
+            {% if form.contact_phone.errors %}
+              <div class="field-help" style="color:#b42318;">{{ form.contact_phone.errors|join:", " }}</div>
+            {% endif %}
           </div>
         </div>
       </div>
@@ -93,56 +119,140 @@
           <div>
             <label>Billing City</label>
             {{ form.billing_city }}
+            {% if form.billing_city.errors %}
+              <div class="field-help" style="color:#b42318;">{{ form.billing_city.errors|join:", " }}</div>
+            {% endif %}
           </div>
           <div>
             <label>Billing State</label>
             {{ form.billing_state }}
+            {% if form.billing_state.errors %}
+              <div class="field-help" style="color:#b42318;">{{ form.billing_state.errors|join:", " }}</div>
+            {% endif %}
           </div>
           <div>
             <label>Billing Country</label>
             {{ form.billing_country }}
+            {% if form.billing_country.errors %}
+              <div class="field-help" style="color:#b42318;">{{ form.billing_country.errors|join:", " }}</div>
+            {% endif %}
           </div>
           <div>
             <label>Billing Address</label>
             {{ form.billing_address }}
+            {% if form.billing_address.errors %}
+              <div class="field-help" style="color:#b42318;">{{ form.billing_address.errors|join:", " }}</div>
+            {% endif %}
           </div>
           <div>
             <label>Billing Postal Code</label>
             {{ form.billing_postal_code }}
+            {% if form.billing_postal_code.errors %}
+              <div class="field-help" style="color:#b42318;">{{ form.billing_postal_code.errors|join:", " }}</div>
+            {% endif %}
           </div>
         </div>
       </div>
 
       <div class="card" style="margin-top:14px;box-shadow:none;border:1px dashed var(--border);">
         <div style="font-weight:600;margin-bottom:10px;">Item Details</div>
-        <div class="grid cols-3">
-          <div>
-            <label>Item Name</label>
-            {{ form.item_name }}
-          </div>
-          <div>
-            <label>Quantity</label>
-            {{ form.quantity }}
-          </div>
-          <div>
-            <label>Currency</label>
-            {{ form.currency }}
-          </div>
-          <div>
-            <label>Tax Mode</label>
-            {{ form.tax_mode }}
-          </div>
-          <div style="grid-column: span 2;">
-            <label>Item Description</label>
-            {{ form.item_description }}
-          </div>
+        <div class="muted" style="margin-bottom:12px;">Add one row for each replacement part. Product models like {{ ticket.model|default:"this ticket's product" }} stay in the ticket itself, while these rows are only for parts.</div>
+        <div style="overflow:auto;">
+          <table class="table" id="line-items-table">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Serial Number</th>
+                <th>Qty</th>
+                <th>Description</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="line-items-body">
+              {% for row in form.line_item_rows %}
+                <tr class="line-item-row">
+                  <td>
+                    <select name="line_item_name">
+                      <option value="">Select part</option>
+                      {% for choice in form.spare_part_choices %}
+                        <option value="{{ choice }}" {% if row.item_name == choice %}selected{% endif %}>{{ choice }}</option>
+                      {% endfor %}
+                    </select>
+                  </td>
+                  <td><input type="text" name="line_item_serial_number" value="{{ row.serial_number|default:'' }}" placeholder="Optional"></td>
+                  <td><input type="number" name="line_item_quantity" value="{{ row.quantity|default:'1' }}" min="1"></td>
+                  <td><textarea name="line_item_description" rows="2" placeholder="Notes or exact part details">{{ row.item_description|default:'' }}</textarea></td>
+                  <td><button type="button" class="btn remove-line-item">Remove</button></td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
+          <button type="button" id="add-line-item" class="btn">Add Item</button>
+          <span class="muted">Tip: for a full unit replacement, keep one row only. For spare parts, add multiple rows.</span>
         </div>
       </div>
 
       <div style="margin-top:16px;display:flex;gap:10px;">
-        <button class="btn primary" type="submit">Save</button>
+        <button class="btn primary" type="submit">{% if replacement.pk and replacement.status == "COMPLETED" %}Update{% else %}Complete{% endif %}</button>
         <a class="btn" href="{% url 'panel:panel_replacements' %}">Cancel</a>
       </div>
     </form>
   </div>
+
+  <script>
+  (function() {
+    var body = document.getElementById('line-items-body');
+    var addBtn = document.getElementById('add-line-item');
+
+    function createRow() {
+      var row = document.createElement('tr');
+      row.className = 'line-item-row';
+      row.innerHTML = [
+        '<td><select name="line_item_name"><option value="">Select part</option>{% for choice in form.spare_part_choices %}<option value="{{ choice }}">{{ choice }}</option>{% endfor %}</select></td>',
+        '<td><input type="text" name="line_item_serial_number" placeholder="Optional"></td>',
+        '<td><input type="number" name="line_item_quantity" value="1" min="1"></td>',
+        '<td><textarea name="line_item_description" rows="2" placeholder="Notes or exact part details"></textarea></td>',
+        '<td><button type="button" class="btn remove-line-item">Remove</button></td>'
+      ].join('');
+      return row;
+    }
+
+    function ensureAtLeastOneRow() {
+      if (!body.querySelector('.line-item-row')) {
+        body.appendChild(createRow());
+      }
+    }
+
+    addBtn.addEventListener('click', function() {
+      var row = createRow();
+      body.appendChild(row);
+      var input = row.querySelector('select[name="line_item_name"]');
+      if (input) {
+        input.focus();
+      }
+    });
+
+    body.addEventListener('click', function(event) {
+      if (!event.target.classList.contains('remove-line-item')) return;
+      var rows = body.querySelectorAll('.line-item-row');
+      if (rows.length === 1) {
+        var firstRow = rows[0];
+        firstRow.querySelectorAll('input, textarea, select').forEach(function(field) {
+          if (field.name === 'line_item_quantity') {
+            field.value = '1';
+          } else {
+            field.value = '';
+          }
+        });
+        return;
+      }
+      event.target.closest('.line-item-row').remove();
+      ensureAtLeastOneRow();
+    });
+
+    ensureAtLeastOneRow();
+  })();
+  </script>
 {% endblock %}

@@ -6,6 +6,37 @@
       <strong>Replacement</strong>
       <span class="muted">Replacement tickets and challan details</span>
     </div>
+    {% if PANEL_SHOW_FILTERS %}
+      <form class="filters" method="get">
+        <div class="inline">
+          <div>
+            <label>Status</label>
+            <select name="status">
+              <option value="">All</option>
+              <option value="DRAFT" {% if filters.status == "DRAFT" %}selected{% endif %}>Draft</option>
+              <option value="PROCESSING" {% if filters.status == "PROCESSING" %}selected{% endif %}>Processing</option>
+              <option value="COMPLETED" {% if filters.status == "COMPLETED" %}selected{% endif %}>Completed</option>
+            </select>
+          </div>
+          <div>
+            <label>From</label>
+            <input type="date" name="date_from" value="{{ filters.date_from }}" />
+          </div>
+          <div>
+            <label>To</label>
+            <input type="date" name="date_to" value="{{ filters.date_to }}" />
+          </div>
+          <div>
+            <label>Search</label>
+            <input type="text" name="search" placeholder="Ticket ID / Name / Phone" value="{{ filters.search }}" />
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn primary" type="submit">Apply</button>
+          <a class="btn" href="{% url 'panel:panel_replacements' %}">Clear</a>
+        </div>
+      </form>
+    {% endif %}
     <div style="margin-top:12px;overflow:auto;">
       <table class="table">
         <thead>
@@ -25,7 +56,13 @@
               <td>{{ row.ticket.ticket_id }}</td>
               <td>{{ row.ticket.customer.name|default:"-" }}</td>
               <td>{{ row.ticket.customer.contact_phone|default:"-" }}</td>
-              <td>{{ row.ticket.model|default:"-" }}</td>
+              <td>
+                {% if row.replacement and row.replacement.items_summary %}
+                  {{ row.replacement.items_summary }}
+                {% else %}
+                  {{ row.ticket.model|default:"-" }}
+                {% endif %}
+              </td>
               <td>
                 {% if row.replacement %}
                   {{ row.replacement.get_status_display }}
@@ -34,7 +71,17 @@
                 {% endif %}
               </td>
               <td>{{ row.ticket.created_at|date:"Y-m-d H:i" }}</td>
-              <td><a class="btn" href="{% url 'panel:panel_replacement_edit' row.ticket.id %}">Open</a></td>
+              <td>
+                {% if row.replacement and row.replacement.status == "COMPLETED" %}
+                  <a class="btn" href="{% url 'panel:panel_replacement_invoice' row.ticket.id %}" target="_blank" rel="noopener">Invoice PDF</a>
+                  <a class="btn" href="{% url 'panel:panel_replacement_edit' row.ticket.id %}">Edit</a>
+                {% elif row.replacement %}
+                  <a class="btn" href="{% url 'panel:panel_replacement_invoice' row.ticket.id %}" target="_blank" rel="noopener">Invoice PDF</a>
+                  <a class="btn" href="{% url 'panel:panel_replacement_edit' row.ticket.id %}">Open</a>
+                {% else %}
+                  <a class="btn" href="{% url 'panel:panel_replacement_edit' row.ticket.id %}">Open</a>
+                {% endif %}
+              </td>
             </tr>
           {% empty %}
             <tr><td colspan="7" class="muted">No replacement tickets found.</td></tr>

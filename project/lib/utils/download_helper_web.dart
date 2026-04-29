@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import 'package:web/web.dart' as web;
 
-Future<void> downloadBytesImpl(Uint8List bytes, String filename) async {
+Future<String> downloadBytesImpl(Uint8List bytes, String filename) async {
   final parts = <JSAny?>[bytes.toJS].toJS;
   final blob = web.Blob(parts as JSArray<web.BlobPart>);
   final url = web.URL.createObjectURL(blob);
@@ -12,5 +12,6 @@ Future<void> downloadBytesImpl(Uint8List bytes, String filename) async {
     ..download = filename
     ..click();
   web.URL.revokeObjectURL(url);
+  return url;
 }
 

@@ -17,6 +17,7 @@ class EngineerReportsTab extends StatefulWidget {
 class _EngineerReportsTabState extends State<EngineerReportsTab> {
   late Future<List<ReportData>> _future;
   DateTime _selectedDate = DateTime.now();
+  List<ReportData> _myReports = [];
 
   String _fmt(DateTime? value) {
     if (value == null) return '-';
@@ -98,18 +99,18 @@ class _EngineerReportsTabState extends State<EngineerReportsTab> {
     return lines.join('\n');
   }
 
-  Future<void> _export(List<ReportData> reports) async {
-    if (reports.isEmpty) {
+  Future<void> _export() async {
+    if (_myReports.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No reports to export.')));
       return;
     }
     try {
-      final csv = _toCsv(reports);
+      final csv = _toCsv(_myReports);
       final bytes = Uint8List.fromList(csv.codeUnits);
       final filename = 'reports_${_fmtDate(_selectedDate)}.csv';
-      await downloadBytes(bytes, filename);
+      final path = await downloadBytes(bytes, filename);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Saved to Downloads: $filename')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Saved: $path')));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Export failed. $e')));
@@ -127,8 +128,8 @@ class _EngineerReportsTabState extends State<EngineerReportsTab> {
         if (snapshot.hasError) {
           return Center(child: Text('Failed to load reports. ${snapshot.error}'));
         }
-        final myReports = snapshot.data ?? [];
-        if (myReports.isEmpty) return const Center(child: Text('No reports submitted yet.'));
+        _myReports = snapshot.data ?? [];
+        final myReports = _myReports;
 
         return RefreshIndicator(
           onRefresh: _refresh,
@@ -150,7 +151,7 @@ class _EngineerReportsTabState extends State<EngineerReportsTab> {
                   Row(
                     children: [
                       IconButton(tooltip: 'Refresh', onPressed: _refresh, icon: const Icon(Icons.refresh)),
-                      IconButton(tooltip: 'Export CSV', onPressed: () => _export(myReports), icon: const Icon(Icons.download)),
+                      IconButton(tooltip: 'Export CSV', onPressed: _export, icon: const Icon(Icons.download)),
                     ],
                   ),
                 ],

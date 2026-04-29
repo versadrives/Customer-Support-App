@@ -22,16 +22,18 @@
         font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
         background: var(--bg);
         color: var(--ink);
+        overflow: hidden;
       }
       .shell {
         display: grid;
         grid-template-columns: 260px 1fr;
-        min-height: 100vh;
+        height: 100vh;
       }
       .sidebar {
         background: #0a3f6a;
         color: #e6eef7;
         padding: 24px 18px;
+        overflow-y: auto;
       }
       .brand {
         display: flex;
@@ -67,20 +69,7 @@
       }
       .content {
         padding: 28px;
-      }
-      .topbar {
-        background: linear-gradient(135deg, #0e61a5, #4c8fd0);
-        color: white;
-        border-radius: 20px;
-        padding: 18px 22px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        box-shadow: var(--shadow);
-        margin-bottom: 20px;
-      }
-      .topbar small {
-        color: #d3e4f3;
+        overflow-y: auto;
       }
       .card {
         background: var(--surface);
@@ -260,9 +249,9 @@
     <div class="shell">
       <aside class="sidebar">
         <div class="brand">
-          <div class="brand-badge">CS</div>
+          <div class="brand-badge">S</div>
           <div>
-            <div style="font-weight:700;">Support Panel</div>
+            <div style="font-weight:700;">SuperFan</div>
             <small>Admin workspace</small>
           </div>
         </div>
@@ -276,20 +265,29 @@
           {% if PANEL_SHOW_ADMIN_LINK %}
             <a href="/admin/logout/?next=/admin/">Admin</a>
           {% endif %}
+          <div style="margin-top:auto;padding-top:12px;border-top:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:space-between;gap:8px;">
+            <div>
+              <div style="font-size:11px;color:#93c5fd;">Logged in as</div>
+              <div style="font-weight:600;color:white;font-size:13px;">{{ user.get_full_name|default:user.username }}</div>
+            </div>
+            <a href="/panel/logout/" onclick="document.getElementById('logout-modal').style.display='flex';return false;" style="padding:6px 10px;background:rgba(255,255,255,0.1);border-radius:8px;color:#dde9f5;font-size:12px;">Logout</a>
+          </div>
         </nav>
       </aside>
       <main class="content">
-        <div class="topbar">
-          <div>
-            <div style="font-size:20px;font-weight:700;">{{ page_title }}</div>
-            <small>Customer Support Operations</small>
-          </div>
-          <div>
-            <a class="btn" href="/panel/logout/">Logout</a>
-          </div>
-        </div>
         {% block content %}{% endblock %}
       </main>
+    </div>
+    <div id="logout-modal" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.5);z-index:9999;align-items:center;justify-content:center;">
+      <div style="background:white;border-radius:16px;padding:32px;max-width:360px;width:100%;box-shadow:0 25px 50px rgba(15,23,42,0.2);text-align:center;">
+        <div style="font-size:48px;margin-bottom:12px;"></div>
+        <div style="font-size:18px;font-weight:700;margin-bottom:8px;">Logout</div>
+        <div style="color:#64748b;margin-bottom:24px;">Are you sure you want to logout from Support Panel?</div>
+        <div style="display:flex;gap:10px;justify-content:center;">
+          <a class="btn" href="#" onclick="document.getElementById('logout-modal').style.display='none';return false;">Cancel</a>
+          <a class="btn primary" href="/panel/logout/">Logout</a>
+        </div>
+      </div>
     </div>
     <script>
       (function () {

@@ -1,0 +1,66 @@
+{% extends "panel/base.html" %}
+
+{% block content %}
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <strong>Replacement Report {{ replacement.ticket.ticket_id }}</strong>
+      <div style="display:flex;gap:8px;">
+        <a class="btn" href="{% url 'panel:panel_replacement_invoice' replacement.ticket.id %}" target="_blank" rel="noopener">Invoice PDF</a>
+        <a class="btn" href="/panel/reports/">Back</a>
+      </div>
+    </div>
+    <div style="margin-top:12px;">
+      <table class="table">
+        <tbody>
+          <tr><th>Log Date</th><td>{{ replacement.updated_at|date:"Y-m-d H:i" }}</td></tr>
+          <tr><th>Ticket No</th><td>{{ replacement.ticket.ticket_id }}</td></tr>
+          <tr><th>Service Type</th><td>{{ replacement.ticket.get_service_type_display }}</td></tr>
+          <tr><th>Customer</th><td>{{ replacement.ticket.customer.name|default:"-" }}</td></tr>
+          <tr><th>Contact Name</th><td>{{ replacement.contact_name|default:replacement.ticket.customer.name }}</td></tr>
+          <tr><th>Contact Phone</th><td>{{ replacement.contact_phone|default:replacement.ticket.customer.contact_phone|default:"-" }}</td></tr>
+          <tr><th>Challan Number</th><td>{{ replacement.custom_challan_number|default:replacement.ref_number|default:"-" }}</td></tr>
+          <tr><th>Ref Date</th><td>{{ replacement.ref_date|date:"Y-m-d"|default:"-" }}</td></tr>
+          <tr><th>Client Ref No</th><td>{{ replacement.client_ref_number|default:"-" }}</td></tr>
+          <tr><th>Client Ref Date</th><td>{{ replacement.client_ref_date|date:"Y-m-d"|default:"-" }}</td></tr>
+          <tr><th>Issue</th><td>{{ replacement.ticket.issue|default:"-" }}</td></tr>
+          <tr><th>Serial Number</th><td>{{ replacement.ticket.serial_number|default:"-" }}</td></tr>
+          <tr><th>Billing Address</th><td>{{ replacement.billing_address|default:"-" }}</td></tr>
+          <tr><th>Status</th><td>{{ replacement.get_status_display }}</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-top:14px;">
+      <strong>Replacement Items</strong>
+      <div style="margin-top:8px;overflow:auto;">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Serial Number</th>
+              <th>Qty</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in replacement.line_items.all %}
+              <tr>
+                <td>{{ item.item_name }}</td>
+                <td>{{ item.serial_number|default:"-" }}</td>
+                <td>{{ item.quantity }}</td>
+                <td>{{ item.item_description|default:"-" }}</td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td>{{ replacement.item_name|default:"-" }}</td>
+                <td>{{ replacement.ticket.serial_number|default:"-" }}</td>
+                <td>{{ replacement.quantity }}</td>
+                <td>{{ replacement.item_description|default:"-" }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+{% endblock %}

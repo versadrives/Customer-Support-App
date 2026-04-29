@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(powershell *)"
+      "Bash(powershell *)",
+      "Bash(python manage.py makemigrations core --name add_item_model)",
+      "Bash(python manage.py migrate core)",
+      "Bash(python -c \"import django; django.setup\\(\\); from core.models import Item; from core.views import panel_item_create; print\\('OK'\\)\")",
+      "Bash(DJANGO_SETTINGS_MODULE=project.settings python -c \"import django; django.setup\\(\\); from core.models import Item; from core.views import panel_item_create; print\\('OK'\\)\")",
+      "Bash(DJANGO_SETTINGS_MODULE=support_backend.settings python -c \"import django; django.setup\\(\\); from core.models import Item; from core.views import panel_item_create; print\\('OK'\\)\")"
     ]
   }
 }

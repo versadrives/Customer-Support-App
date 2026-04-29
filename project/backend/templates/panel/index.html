@@ -1,6 +1,9 @@
 {% extends "panel/base.html" %}
 
 {% block content %}
+  <style>
+    .stat-grid { grid-template-columns: repeat(5, minmax(0, 1fr)) !important; }
+  </style>
   <div class="stat-grid">
     <div class="stat-card">
       <div class="stat-label">Assigned</div>
@@ -48,6 +51,7 @@
           <tr>
             <th>Ticket</th>
             <th>Customer</th>
+            <th>Type</th>
             <th>Status</th>
             <th>Created</th>
             <th></th>
@@ -58,6 +62,7 @@
             <tr>
               <td>{{ t.ticket_id }}</td>
               <td>{{ t.customer.name|capfirst }}</td>
+              <td>{{ t.get_service_type_display }}</td>
               <td>
                 {% if t.status == "OPEN" %}
                   <span class="pill open">Open</span>
@@ -72,10 +77,16 @@
                 {% endif %}
               </td>
               <td>{{ t.created_at|date:"Y-m-d H:i" }}</td>
-              <td><a class="btn" href="/panel/tickets/{{ t.id }}/edit/">Update</a></td>
+              <td>
+                {% if t.service_type == "REPLACEMENT" %}
+                  <a class="btn" href="/panel/replacements/{{ t.id }}/">Open</a>
+                {% else %}
+                  <a class="btn" href="/panel/tickets/{{ t.id }}/edit/">Update</a>
+                {% endif %}
+              </td>
             </tr>
           {% empty %}
-            <tr><td colspan="5" class="muted">No tickets yet.</td></tr>
+            <tr><td colspan="6" class="muted">No tickets yet.</td></tr>
           {% endfor %}
         </tbody>
       </table>

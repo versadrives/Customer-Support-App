@@ -17,114 +17,86 @@
     {% endif %}
     <form method="post" style="margin-top:12px;">
       {% csrf_token %}
-      <div class="grid" style="gap:18px;">
-        <div class="card" style="box-shadow:none;border:1px dashed var(--border);">
-          <div style="font-weight:600;margin-bottom:10px;">Customer Details</div>
-          <div class="grid cols-3">
-            <div>
-              <label>Customer name</label>
-              {{ form.customer_name }}
-              {% if form.customer_name.errors %}
-                <div class="field-help" style="color:#b42318;">{{ form.customer_name.errors|join:", " }}</div>
-              {% endif %}
-            </div>
-            <div>
-              <label>Phone number</label>
-              {{ form.customer_phone }}
-              {% if form.customer_phone.errors %}
-                <div class="field-help" style="color:#b42318;">{{ form.customer_phone.errors|join:", " }}</div>
-              {% endif %}
-            </div>
-            <div>
-              <label>Address</label>
-              {{ form.customer_address }}
-              {% if form.customer_address.errors %}
-                <div class="field-help" style="color:#b42318;">{{ form.customer_address.errors|join:", " }}</div>
-              {% endif %}
-            </div>
-          </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px 20px;align-items:start;">
+        <div style="grid-column:1/4;font-weight:600;margin-bottom:4px;border-bottom:1px solid var(--border);padding-bottom:6px;">Customer Details</div>
+        <div>
+          <label>Customer name</label>
+          {{ form.customer_name }}
+          {% if form.customer_name.errors %}<div class="field-help" style="color:#b42318;">{{ form.customer_name.errors|join:", " }}</div>{% endif %}
         </div>
-        <div class="card" style="box-shadow:none;border:1px dashed var(--border);">
-          <div style="font-weight:600;margin-bottom:10px;">Ticket Details</div>
-          <div class="grid cols-3">
-            <div>
-              <label>Ticket ID</label>
-              {{ form.ticket_id }}
-              {% if form.ticket_id.errors %}
-                <div class="field-help" style="color:#b42318;">{{ form.ticket_id.errors|join:", " }}</div>
-              {% endif %}
-            </div>
-            <div>
-              <label>Location</label>
-              {{ form.location }}
-              {% if form.location.errors %}
-                <div class="field-help" style="color:#b42318;">{{ form.location.errors|join:", " }}</div>
-              {% endif %}
-            </div>
-            <div>
-              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;">
-                <label style="margin-bottom:0;">Issue</label>
-                <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                  <button class="btn" type="button" id="add-issue-option-btn" title="Add issue option" aria-label="Add issue option" style="width:32px;height:32px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:18px;line-height:1;">+</button>
-                  <button class="btn" type="button" id="remove-issue-option-btn" title="Remove selected issue option" aria-label="Remove selected issue option" style="width:32px;height:32px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:18px;line-height:1;">x</button>
-                </div>
-              </div>
-              {{ form.issue_choice }}
-              {% if form.issue_choice.errors %}
-                <div class="field-help" style="color:#b42318;">{{ form.issue_choice.errors|join:", " }}</div>
-              {% endif %}
-              <div id="issue-option-feedback" class="field-help"></div>
-            </div>
-            <div>
-              <label>Other Issue</label>
-              {{ form.issue_custom }}
-              <div class="field-help">Use this when the issue is not in the dropdown.</div>
-              {% if form.issue_custom.errors %}
-                <div class="field-help" style="color:#b42318;">{{ form.issue_custom.errors|join:", " }}</div>
-              {% endif %}
-            </div>
-            <div>
-              <label>Service Type</label>
-              {{ form.service_type }}
-              <div class="field-help">Replacement tickets stay unassigned.</div>
-              {% if form.service_type.errors %}
-                <div class="field-help" style="color:#b42318;">{{ form.service_type.errors|join:", " }}</div>
-              {% endif %}
-            </div>
-            <div>
-              <label>Model</label>
-              {{ form.model }}
-              {% if form.model.errors %}
-                <div class="field-help" style="color:#b42318;">{{ form.model.errors|join:", " }}</div>
-              {% endif %}
-            </div>
-            <div>
-              <label>Serial Number</label>
-              {{ form.serial_number }}
-              {% if form.serial_number.errors %}
-                <div class="field-help" style="color:#b42318;">{{ form.serial_number.errors|join:", " }}</div>
-              {% endif %}
-            </div>
-            <div>
-              <label>MFG Date</label>
-              {{ form.mfg_date }}
-              {% if form.mfg_date.errors %}
-                <div class="field-help" style="color:#b42318;">{{ form.mfg_date.errors|join:", " }}</div>
-              {% endif %}
-            </div>
-          </div>
+        <div>
+          <label>Phone number</label>
+          {{ form.customer_phone }}
+          {% if form.customer_phone.errors %}<div class="field-help" style="color:#b42318;">{{ form.customer_phone.errors|join:", " }}</div>{% endif %}
         </div>
-        <div class="card" style="box-shadow:none;border:1px dashed var(--border);">
-          <div style="font-weight:600;margin-bottom:10px;">Assignment</div>
-          <div class="grid cols-3">
-            <div>
-              <label>Assigned Engineer</label>
-              {{ form.assigned_engineer }}
-              {% if form.assigned_engineer.errors %}
-                <div class="field-help" style="color:#b42318;">{{ form.assigned_engineer.errors|join:", " }}</div>
-              {% endif %}
-            </div>
+        <div>
+          <label>Address</label>
+          {{ form.customer_address }}
+          {% if form.customer_address.errors %}<div class="field-help" style="color:#b42318;">{{ form.customer_address.errors|join:", " }}</div>{% endif %}
+        </div>
+
+        <div style="grid-column:1/4;font-weight:600;margin-top:8px;margin-bottom:4px;border-bottom:1px solid var(--border);padding-bottom:6px;">Ticket Details</div>
+        <div>
+          <label>Ticket ID</label>
+          {{ form.ticket_id }}
+          {% if form.ticket_id.errors %}<div class="field-help" style="color:#b42318;">{{ form.ticket_id.errors|join:", " }}</div>{% endif %}
+        </div>
+        <div>
+          <label>Location</label>
+          {{ form.location }}
+          {% if form.location.errors %}<div class="field-help" style="color:#b42318;">{{ form.location.errors|join:", " }}</div>{% endif %}
+        </div>
+        <div>
+          <label>Service Type</label>
+          {{ form.service_type }}
+          <div class="field-help">Replacement tickets stay unassigned.</div>
+          {% if form.service_type.errors %}<div class="field-help" style="color:#b42318;">{{ form.service_type.errors|join:", " }}</div>{% endif %}
+        </div>
+        <div>
+          <label>Issue</label>
+          <div style="display:flex;gap:6px;align-items:center;">
+            {{ form.issue_choice }}
+            <button type="button" id="remove-issue-btn" class="btn" title="Delete selected issue" style="padding:8px 10px;flex-shrink:0;background:#fee2e2;color:#991b1b;border-color:#fecaca;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+            </button>
           </div>
+          <div id="new-issue-wrap" style="display:none;margin-top:8px;gap:6px;align-items:center;">
+            <input type="text" id="new-issue-name" placeholder="Enter new issue name" style="flex:1;">
+            <button type="button" id="add-issue-btn" class="btn primary" style="flex-shrink:0;">Add</button>
+            <button type="button" id="cancel-issue-btn" class="btn" style="flex-shrink:0;">✕</button>
+          </div>
+          {% if form.issue_choice.errors %}<div class="field-help" style="color:#b42318;">{{ form.issue_choice.errors|join:", " }}</div>{% endif %}
+        </div>
+        <div>
+          <label>Product</label>
+          <div style="display:flex;gap:6px;align-items:center;">
+            {{ form.model_choice }}
+            <button type="button" id="remove-product-btn" class="btn" title="Delete selected product" style="padding:8px 10px;flex-shrink:0;background:#fee2e2;color:#991b1b;border-color:#fecaca;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+            </button>
+          </div>
+          <div id="new-product-wrap" style="display:none;margin-top:8px;gap:6px;align-items:center;">
+            <input type="text" id="new-product-name" placeholder="Enter new product name" style="flex:1;">
+            <button type="button" id="add-product-btn" class="btn primary" style="flex-shrink:0;">Add</button>
+            <button type="button" id="cancel-product-btn" class="btn" style="flex-shrink:0;">✕</button>
+          </div>
+          {% if form.model_choice.errors %}<div class="field-help" style="color:#b42318;">{{ form.model_choice.errors|join:", " }}</div>{% endif %}
+          {% if form.model_custom.errors %}<div class="field-help" style="color:#b42318;">{{ form.model_custom.errors|join:", " }}</div>{% endif %}
+        </div>
+        <div>
+          <label>Serial Number</label>
+          {{ form.serial_number }}
+          {% if form.serial_number.errors %}<div class="field-help" style="color:#b42318;">{{ form.serial_number.errors|join:", " }}</div>{% endif %}
+        </div>
+        <div>
+          <label>MFG Date</label>
+          {{ form.mfg_date }}
+          {% if form.mfg_date.errors %}<div class="field-help" style="color:#b42318;">{{ form.mfg_date.errors|join:", " }}</div>{% endif %}
+        </div>
+        <div>
+          <label>Assigned Engineer</label>
+          {{ form.assigned_engineer }}
+          {% if form.assigned_engineer.errors %}<div class="field-help" style="color:#b42318;">{{ form.assigned_engineer.errors|join:", " }}</div>{% endif %}
         </div>
       </div>
       <div style="margin-top:16px;display:flex;gap:10px;">
@@ -140,127 +112,143 @@
 
       var csrfTokenInput = form.querySelector("input[name='csrfmiddlewaretoken']");
       var issueSelect = document.getElementById("id_issue_choice");
-      var issueCustomInput = document.getElementById("id_issue_custom");
+      var newIssueWrap = document.getElementById("new-issue-wrap");
+      var newIssueName = document.getElementById("new-issue-name");
+      var addIssueBtn = document.getElementById("add-issue-btn");
+      var cancelIssueBtn = document.getElementById("cancel-issue-btn");
+      var removeIssueBtn = document.getElementById("remove-issue-btn");
+      var productSelect = document.getElementById("id_model_choice");
+      var newProductWrap = document.getElementById("new-product-wrap");
+      var newProductName = document.getElementById("new-product-name");
+      var addProductBtn = document.getElementById("add-product-btn");
+      var cancelProductBtn = document.getElementById("cancel-product-btn");
+      var removeProductBtn = document.getElementById("remove-product-btn");
       var serviceTypeSelect = document.getElementById("id_service_type");
       var engineerSelect = document.getElementById("id_assigned_engineer");
-      var addButton = document.getElementById("add-issue-option-btn");
-      var removeButton = document.getElementById("remove-issue-option-btn");
-      var feedback = document.getElementById("issue-option-feedback");
 
-      function setFeedback(message, isError) {
-        feedback.textContent = message || "";
-        feedback.style.color = isError ? "#b42318" : "var(--muted)";
+      function showNewIssueInput() {
+        newIssueWrap.style.display = "flex";
+        newIssueName.focus();
       }
-
-      function syncIssueCustomVisibility() {
-        if (!issueSelect || !issueCustomInput) return;
-        var showCustom = issueSelect.value === "__other__";
-        issueCustomInput.disabled = !showCustom;
-        if (!showCustom && issueSelect.value) {
-          issueCustomInput.value = "";
-        }
+      function hideNewIssueInput() {
+        newIssueWrap.style.display = "none";
+        newIssueName.value = "";
       }
-
+      function showNewProductInput() {
+        newProductWrap.style.display = "flex";
+        newProductName.focus();
+      }
+      function hideNewProductInput() {
+        newProductWrap.style.display = "none";
+        newProductName.value = "";
+      }
       function syncAssignmentAvailability() {
         if (!serviceTypeSelect || !engineerSelect) return;
         var isReplacement = serviceTypeSelect.value === "REPLACEMENT";
         engineerSelect.disabled = isReplacement;
-        if (isReplacement) {
-          engineerSelect.value = "";
-        }
+        if (isReplacement) { engineerSelect.value = ""; }
       }
 
-      function getSelectedIssueOption() {
-        if (!issueSelect) return null;
-        var option = issueSelect.options[issueSelect.selectedIndex];
-        if (!option) return null;
-        if (!option.value || option.value === "__other__") return null;
-        return option;
-      }
-
-      async function postData(url, body) {
-        var response = await fetch(url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "X-CSRFToken": csrfTokenInput ? csrfTokenInput.value : "",
-          },
-          body: body,
+      issueSelect.addEventListener("change", function () {
+        if (issueSelect.value === "__other__") { showNewIssueInput(); } else { hideNewIssueInput(); }
+      });
+      if (productSelect) {
+        productSelect.addEventListener("change", function () {
+          if (productSelect.value === "__other__") { showNewProductInput(); } else { hideNewProductInput(); }
         });
-        var data = await response.json();
-        if (!response.ok) {
-          throw new Error(data.detail || "Request failed.");
-        }
-        return data;
+      }
+      cancelIssueBtn.addEventListener("click", function () { issueSelect.value = ""; hideNewIssueInput(); });
+      if (cancelProductBtn) {
+        cancelProductBtn.addEventListener("click", function () { productSelect.value = ""; hideNewProductInput(); });
       }
 
-      if (issueSelect) {
-        issueSelect.addEventListener("change", syncIssueCustomVisibility);
-        syncIssueCustomVisibility();
+      addIssueBtn.addEventListener("click", function () {
+        var name = newIssueName.value.trim();
+        if (!name) return;
+        name = name[0].toUpperCase() + name.slice(1);
+        var btn = addIssueBtn;
+        btn.disabled = true;
+        btn.textContent = "...";
+        fetch("/panel/tickets/issues/add/", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded", "X-CSRFToken": csrfTokenInput ? csrfTokenInput.value : "" },
+          body: "name=" + encodeURIComponent(name),
+        }).then(function (r) { return r.json(); })
+          .then(function (data) {
+            var otherOption = issueSelect.querySelector("option[value='__other__']");
+            var option = new Option(data.name, data.name, true, true);
+            if (otherOption) { issueSelect.insertBefore(option, otherOption); } else { issueSelect.add(option); }
+            issueSelect.value = data.name;
+            hideNewIssueInput();
+          }).catch(function () { alert("Failed to add issue."); })
+          .finally(function () { btn.disabled = false; btn.textContent = "Add"; });
+      });
+
+      removeIssueBtn.addEventListener("click", function () {
+        var selected = issueSelect.options[issueSelect.selectedIndex];
+        if (!selected || !selected.value || selected.value === "__other__") return;
+        var name = selected.value;
+        if (!confirm('Delete issue "' + name + '"?')) return;
+        var btn = removeIssueBtn;
+        btn.disabled = true;
+        fetch("/panel/tickets/issues/remove/", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded", "X-CSRFToken": csrfTokenInput ? csrfTokenInput.value : "" },
+          body: "name=" + encodeURIComponent(name),
+        }).then(function (r) { return r.json(); })
+          .then(function () { selected.remove(); issueSelect.value = ""; })
+          .catch(function () { alert("Failed to delete issue."); })
+          .finally(function () { btn.disabled = false; });
+      });
+
+      if (addProductBtn) {
+        addProductBtn.addEventListener("click", function () {
+          var name = newProductName.value.trim();
+          if (!name) return;
+          name = name[0].toUpperCase() + name.slice(1);
+          var btn = addProductBtn;
+          btn.disabled = true;
+          btn.textContent = "...";
+          fetch("/panel/tickets/items/add/", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded", "X-CSRFToken": csrfTokenInput ? csrfTokenInput.value : "" },
+            body: "name=" + encodeURIComponent(name),
+          }).then(function (r) { return r.json(); })
+            .then(function (data) {
+              var otherOption = productSelect.querySelector("option[value='__other__']");
+              var option = new Option(data.name, data.name, true, true);
+              if (otherOption) { productSelect.insertBefore(option, otherOption); } else { productSelect.add(option); }
+              productSelect.value = data.name;
+              hideNewProductInput();
+            }).catch(function () { alert("Failed to add product."); })
+            .finally(function () { btn.disabled = false; btn.textContent = "Add"; });
+        });
       }
+
+      if (removeProductBtn) {
+        removeProductBtn.addEventListener("click", function () {
+          var selected = productSelect.options[productSelect.selectedIndex];
+          if (!selected || !selected.value || selected.value === "__other__") return;
+          var name = selected.value;
+          if (!confirm('Delete product "' + name + '"?')) return;
+          var btn = removeProductBtn;
+          btn.disabled = true;
+          fetch("/panel/tickets/items/remove/", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded", "X-CSRFToken": csrfTokenInput ? csrfTokenInput.value : "" },
+            body: "name=" + encodeURIComponent(name),
+          }).then(function (r) { return r.json(); })
+            .then(function () { selected.remove(); productSelect.value = ""; })
+            .catch(function () { alert("Failed to delete product."); })
+            .finally(function () { btn.disabled = false; });
+        });
+      }
+
       if (serviceTypeSelect) {
         serviceTypeSelect.addEventListener("change", syncAssignmentAvailability);
         syncAssignmentAvailability();
       }
-
-      if (addButton) {
-        addButton.addEventListener("click", async function () {
-          var name = window.prompt("Enter the new issue option:");
-          name = (name || "").trim();
-          if (!name) {
-            setFeedback("Issue option was not added.", true);
-            return;
-          }
-          addButton.disabled = true;
-          setFeedback("Saving option...", false);
-          try {
-            var data = await postData("/panel/tickets/issues/add/", "name=" + encodeURIComponent(name));
-            var existing = Array.from(issueSelect.options).find(function (option) {
-              return option.value === data.name;
-            });
-            if (!existing) {
-              var otherOption = issueSelect.querySelector("option[value='__other__']");
-              var option = new Option(data.name, data.name, true, true);
-              if (otherOption) {
-                issueSelect.insertBefore(option, otherOption);
-              } else {
-                issueSelect.add(option);
-              }
-            } else {
-              existing.selected = true;
-            }
-            syncIssueCustomVisibility();
-            setFeedback("Issue option saved.", false);
-          } catch (error) {
-            setFeedback(error.message, true);
-          } finally {
-            addButton.disabled = false;
-          }
-        });
-      }
-
-      if (removeButton) {
-        removeButton.addEventListener("click", async function () {
-          var selected = getSelectedIssueOption();
-          if (!selected) {
-            setFeedback("Select a saved issue option to remove.", true);
-            return;
-          }
-          removeButton.disabled = true;
-          setFeedback("Removing option...", false);
-          try {
-            await postData("/panel/tickets/issues/remove/", "name=" + encodeURIComponent(selected.value));
-            selected.remove();
-            issueSelect.value = "";
-            syncIssueCustomVisibility();
-            setFeedback("Issue option removed.", false);
-          } catch (error) {
-            setFeedback(error.message, true);
-          } finally {
-            removeButton.disabled = false;
-          }
-        });
-      }
+      if (productSelect && productSelect.value === "__other__") { showNewProductInput(); }
     })();
   </script>
 {% endblock %}

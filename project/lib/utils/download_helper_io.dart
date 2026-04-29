@@ -2,30 +2,30 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
 
-Future<void> downloadBytesImpl(Uint8List bytes, String filename) async {
+Future<String> downloadBytesImpl(Uint8List bytes, String filename) async {
+  List<Directory> candidates = [];
+
   if (Platform.isAndroid) {
-    final storage = await Permission.storage.request();
-    if (!storage.isGranted) {
-      final manage = await Permission.manageExternalStorage.request();
-      if (!manage.isGranted) {
-        throw Exception('Storage permission denied.');
-      }
+    candidates.add(Directory('/storage/emulated/0/Download'));
+    final extDirs = await getExternalStorageDirectories(type: StorageDirectory.documents);
+    if (extDirs != null && extDirs.isNotEmpty) {
+      candidates.add(extDirs.first);
     }
   }
 
-  Directory? targetDir;
-  if (Platform.isAndroid) {
-    final dirs = await getExternalStorageDirectories(type: StorageDirectory.downloads);
-    if (dirs != null && dirs.isNotEmpty) {
-      targetDir = dirs.first;
-    }
-    targetDir ??= Directory('/storage/emulated/0/Download');
-  }
-  targetDir ??= await getApplicationDocumentsDirectory();
-  await targetDir.create(recursive: true);
+  candidates.add(await getApplicationDocumentsDirectory());
 
-  final file = File('${targetDir.path}/$filename');
-  await file.writeAsBytes(bytes, flush: true);
+  for (final dir in candidates) {
+    try {
+      if (!await dir.exists()) await dir.create(recursive: true);
+      final file = File('${dir.path}/$filename');
+      await file.writeAsBytes(bytes, flush: true);
+      return file.path;
+    } catch (_) {
+      continue;
+    }
+  }
+
+  throw Exception('Could not save file to any location');
 }

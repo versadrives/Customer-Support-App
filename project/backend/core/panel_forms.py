@@ -1,7 +1,9 @@
 from django import forms
+from django.contrib.auth import password_validation
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 
-from .models import Customer, EngineerProfile, IssueOption, Replacement, Ticket, TicketServiceType, TicketStatus
+from .models import Customer, EngineerProfile, IssueOption, Item, Replacement, ReplacementLineItem, Ticket, TicketServiceType, TicketStatus
 
 
 class PanelLoginForm(forms.Form):
@@ -23,6 +25,8 @@ class PanelTicketForm(forms.ModelForm):
     customer_address = forms.CharField(label="Address")
     issue_choice = forms.ChoiceField(label="Issue", required=False)
     issue_custom = forms.CharField(label="Other issue", required=False)
+    model_choice = forms.ChoiceField(label="Product", required=False)
+    model_custom = forms.CharField(label="Other product", required=False)
 
     class Meta:
         model = Ticket
@@ -47,17 +51,23 @@ class PanelTicketForm(forms.ModelForm):
         issue_choices.extend((option.name, option.name) for option in IssueOption.objects.filter(active=True))
         issue_choices.append(("__other__", "Other"))
         self.fields["issue_choice"].choices = issue_choices
+        model_choices = [("", "Select product")]
+        model_choices.extend((item.name, item.name) for item in Item.objects.filter(active=True))
+        model_choices.append(("__other__", "Other"))
+        self.fields["model_choice"].choices = model_choices
 
     def clean(self):
         cleaned_data = super().clean()
         issue_choice = (cleaned_data.get("issue_choice") or "").strip()
         issue_custom = _capfirst(cleaned_data.get("issue_custom", ""))
+        model_choice = (cleaned_data.get("model_choice") or "").strip()
+        model_custom = _capfirst(cleaned_data.get("model_custom", ""))
         service_type = cleaned_data.get("service_type")
         assigned_engineer = cleaned_data.get("assigned_engineer")
 
         if issue_choice == "__other__":
             if not issue_custom:
-                self.add_error("issue_custom", "Enter the issue when Other is selected.")
+                self.add_error("issue_choice", "Add the issue using Add Issue.")
             cleaned_data["resolved_issue"] = issue_custom
         elif issue_choice:
             cleaned_data["resolved_issue"] = issue_choice
@@ -65,6 +75,17 @@ class PanelTicketForm(forms.ModelForm):
             cleaned_data["resolved_issue"] = issue_custom
         else:
             self.add_error("issue_choice", "Select an issue or enter a custom one.")
+
+        if model_choice == "__other__":
+            if not model_custom:
+                self.add_error("model_choice", "Add the product using Add Product.")
+            cleaned_data["resolved_model"] = model_custom
+        elif model_choice:
+            cleaned_data["resolved_model"] = model_choice
+        elif model_custom:
+            cleaned_data["resolved_model"] = model_custom
+        else:
+            self.add_error("model_choice", "Select a product or enter a custom one.")
 
         if service_type == TicketServiceType.REPLACEMENT and assigned_engineer:
             self.add_error("assigned_engineer", "Replacement tickets cannot be assigned to an engineer.")
@@ -84,7 +105,7 @@ class PanelTicketForm(forms.ModelForm):
         self.instance.customer = customer
         self.instance.location = _capfirst(self.cleaned_data.get("location", ""))
         self.instance.issue = self.cleaned_data.get("resolved_issue", "")
-        self.instance.model = _capfirst(self.cleaned_data.get("model", ""))
+        self.instance.model = self.cleaned_data.get("resolved_model", "")
         self.instance.serial_number = _capfirst(self.cleaned_data.get("serial_number", ""))
         self.instance.ticket_id = _capfirst(self.cleaned_data.get("ticket_id", ""))
         self.instance.service_type = self.cleaned_data.get("service_type")
@@ -130,77 +151,204 @@ class PanelTicketStatusForm(forms.ModelForm):
 
 
 class PanelReplacementForm(forms.ModelForm):
+    SPARE_PART_CHOICES = (
+        "Full Product",
+        "Motor",
+        "PCB Board",
+        "Blade Set",
+        "Remote",
+        "Accessories",
+    )
+
     class Meta:
         model = Replacement
         fields = (
-            "subject",
             "ref_date",
             "client_ref_date",
             "ref_number",
             "custom_challan_number",
             "client_ref_number",
-            "organization_name",
             "contact_name",
             "contact_phone",
-            "status",
-            "category",
             "billing_city",
             "billing_state",
             "billing_country",
             "billing_address",
             "billing_postal_code",
-            "item_name",
-            "item_description",
-            "quantity",
-            "currency",
-            "tax_mode",
         )
         widgets = {
             "ref_date": forms.DateInput(attrs={"type": "date"}),
             "client_ref_date": forms.DateInput(attrs={"type": "date"}),
             "billing_address": forms.Textarea(attrs={"rows": 4}),
-            "item_description": forms.Textarea(attrs={"rows": 4}),
-            "quantity": forms.NumberInput(attrs={"min": 1}),
         }
 
     def __init__(self, *args, **kwargs):
+        self.created_by = kwargs.pop("created_by", None)
         self.ticket = kwargs.pop("ticket")
         super().__init__(*args, **kwargs)
         replacement = self.instance
         customer = getattr(self.ticket, "customer", None)
         if not replacement.pk:
-            self.fields["subject"].initial = f"Replacement - {self.ticket.ticket_id}"
-            self.fields["organization_name"].initial = customer.name if customer else ""
             self.fields["contact_name"].initial = (customer.contact_name or customer.name) if customer else ""
             self.fields["contact_phone"].initial = customer.contact_phone if customer else ""
             self.fields["billing_address"].initial = customer.address if customer else ""
-            self.fields["item_name"].initial = self.ticket.model
-            self.fields["item_description"].initial = self.ticket.issue
             self.fields["ref_number"].initial = self.ticket.ticket_id
+            default_name = self.ticket.model or "Full Product"
+            default_description = self.ticket.issue or ""
+            self.line_item_rows = [
+                {
+                    "item_name": default_name,
+                    "item_description": default_description,
+                    "quantity": 1,
+                    "serial_number": self.ticket.serial_number or "",
+                }
+            ]
+        else:
+            self.line_item_rows = [
+                {
+                    "item_name": line.item_name,
+                    "item_description": line.item_description,
+                    "quantity": line.quantity,
+                    "serial_number": line.serial_number,
+                }
+                for line in replacement.line_items.all()
+            ]
+            if not self.line_item_rows:
+                fallback_name = replacement.item_name or self.ticket.model or "Full Product"
+                self.line_item_rows = [
+                    {
+                        "item_name": fallback_name,
+                        "item_description": replacement.item_description or self.ticket.issue or "",
+                        "quantity": replacement.quantity or 1,
+                        "serial_number": self.ticket.serial_number or "",
+                    }
+                ]
+
+        if self.is_bound:
+            self.line_item_rows = self.extract_line_items(self.data)
+
+        self.spare_part_choices = list(self.SPARE_PART_CHOICES)
+        for row in self.line_item_rows:
+            name = row.get("item_name", "")
+            if name and name not in self.spare_part_choices:
+                self.spare_part_choices.append(name)
+
+    @staticmethod
+    def extract_line_items(data):
+        names = data.getlist("line_item_name")
+        descriptions = data.getlist("line_item_description")
+        quantities = data.getlist("line_item_quantity")
+        serial_numbers = data.getlist("line_item_serial_number")
+        row_count = max(len(names), len(descriptions), len(quantities), len(serial_numbers), 1)
+        rows = []
+        for index in range(row_count):
+            rows.append(
+                {
+                    "item_name": (names[index] if index < len(names) else "").strip(),
+                    "item_description": (descriptions[index] if index < len(descriptions) else "").strip(),
+                    "quantity": (quantities[index] if index < len(quantities) else "").strip(),
+                    "serial_number": (serial_numbers[index] if index < len(serial_numbers) else "").strip(),
+                }
+            )
+        return rows
+
+    def clean(self):
+        cleaned_data = super().clean()
+        cleaned_items = []
+        has_line_item = False
+
+        for index, row in enumerate(self.extract_line_items(self.data), start=1):
+            name = _capfirst(row.get("item_name", ""))
+            description = _capfirst(row.get("item_description", ""))
+            quantity_raw = (row.get("quantity", "") or "").strip()
+            serial_number = row.get("serial_number", "").strip()
+            has_meaningful_value = any([name, description, serial_number]) or (quantity_raw not in ("", "1"))
+            if not has_meaningful_value:
+                continue
+
+            has_line_item = True
+            if not name:
+                raise forms.ValidationError(f"Line item {index}: item name is required.")
+
+            try:
+                quantity = int(quantity_raw or 1)
+            except (TypeError, ValueError):
+                raise forms.ValidationError(f"Line item {index}: quantity must be a whole number.")
+
+            if quantity < 1:
+                raise forms.ValidationError(f"Line item {index}: quantity must be at least 1.")
+
+            cleaned_items.append(
+                {
+                    "item_name": name,
+                    "item_description": description,
+                    "quantity": quantity,
+                    "serial_number": serial_number,
+                }
+            )
+
+        if not has_line_item:
+            raise forms.ValidationError("Add at least one replacement item.")
+
+        cleaned_data["line_items"] = cleaned_items
+        return cleaned_data
 
     def save(self, commit=True):
         instance = super().save(commit=False)
         instance.ticket = self.ticket
-        instance.subject = _capfirst(self.cleaned_data.get("subject", ""))
-        instance.organization_name = _capfirst(self.cleaned_data.get("organization_name", ""))
+        if not instance.pk and self.created_by and not instance.created_by_id:
+            instance.created_by = self.created_by
+        if not instance.subject:
+            instance.subject = f"Replacement - {self.ticket.ticket_id}"
+        if not instance.organization_name:
+            customer = getattr(self.ticket, "customer", None)
+            instance.organization_name = _capfirst(customer.name) if customer and customer.name else ""
         instance.contact_name = _capfirst(self.cleaned_data.get("contact_name", ""))
-        instance.category = _capfirst(self.cleaned_data.get("category", ""))
+        instance.contact_phone = self.cleaned_data.get("contact_phone", "").strip()
         instance.billing_city = _capfirst(self.cleaned_data.get("billing_city", ""))
         instance.billing_state = _capfirst(self.cleaned_data.get("billing_state", ""))
         instance.billing_country = _capfirst(self.cleaned_data.get("billing_country", ""))
         instance.billing_address = _capfirst(self.cleaned_data.get("billing_address", ""))
-        instance.item_name = _capfirst(self.cleaned_data.get("item_name", ""))
-        instance.item_description = _capfirst(self.cleaned_data.get("item_description", ""))
+        line_items = self.cleaned_data.get("line_items", [])
+        first_item = line_items[0] if line_items else {}
+        instance.item_name = first_item.get("item_name", "")
+        instance.item_description = first_item.get("item_description", "")
+        instance.quantity = sum(item.get("quantity", 0) for item in line_items) or 1
         if commit:
             instance.save()
+            instance.line_items.all().delete()
+            ReplacementLineItem.objects.bulk_create(
+                [
+                    ReplacementLineItem(
+                        replacement=instance,
+                        sort_order=index,
+                        **line_item,
+                    )
+                    for index, line_item in enumerate(line_items)
+                ]
+            )
         return instance
 
 
 class PanelEngineerForm(forms.Form):
     username = forms.CharField()
-    password = forms.CharField(widget=forms.PasswordInput)
+    password = forms.CharField(
+        widget=forms.PasswordInput,
+        help_text=password_validation.password_validators_help_text_html(),
+    )
     name = forms.CharField(label="Name")
     phone = forms.CharField(required=False)
+
+    def clean_password(self):
+        password = self.cleaned_data["password"]
+        username = self.cleaned_data.get("username", "")
+        full_name = self.cleaned_data.get("name", "")
+        user = User(username=username, first_name=full_name)
+        try:
+            password_validation.validate_password(password, user=user)
+        except ValidationError as exc:
+            raise forms.ValidationError(exc.messages)
+        return password
 
     def save(self):
         full_name = _capfirst(self.cleaned_data.get('name', ''))

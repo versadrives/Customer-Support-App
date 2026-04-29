@@ -1,63 +1,224 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+<head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Support Panel · Login</title>
     <style>
-      :root { --ink:#0f172a; --accent:#0e61a5; --muted:#64748b; }
-      body {
-        margin:0;
-        font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-        background: linear-gradient(135deg, #e6eef7, #f0f6fb, #f7faff);
-        color: var(--ink);
-        min-height: 100vh;
-        display: grid;
-        place-items: center;
-      }
-      .card {
-        width: min(420px, 92vw);
-        background: white;
-        border-radius: 20px;
-        padding: 24px;
-        box-shadow: 0 22px 50px rgba(15, 23, 42, 0.12);
-        border: 1px solid #e2e8f0;
-      }
-      h1 { margin: 0 0 6px; font-size: 22px; }
-      p { margin: 0 0 14px; color: var(--muted); }
-      label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 6px; }
-      input {
-        width: 100%;
-        padding: 10px 12px;
-        border-radius: 12px;
-        border: 1px solid #e2e8f0;
-        outline: none;
-      }
-      button {
-        width: 100%;
-        margin-top: 16px;
-        padding: 10px 12px;
-        border-radius: 12px;
-        border: none;
-        background: var(--accent);
-        color: white;
-        font-weight: 600;
-        cursor: pointer;
-      }
-      .error { color: #b91c1c; font-size: 13px; margin-top: 10px; }
+        :root {
+            --brand-main: #0e61a5;
+            --brand-dark: #0a4d84;
+            --brand-light: #f0f7ff;
+            --text-dark: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
+
+        * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+
+        body, html {
+            margin: 0;
+            height: 100%;
+            font-family: "Inter", -apple-system, system-ui, sans-serif;
+            background: #ffffff;
+            color: var(--text-dark);
+        }
+
+        .page-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Branding Side */
+        .brand-panel {
+            flex: 1;
+            background-color: var(--brand-main);
+            background-image: 
+                radial-gradient(circle at 2px 2px, rgba(255,255,255,0.05) 1px, transparent 0);
+            background-size: 32px 32px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 60px;
+            color: white;
+        }
+
+        @media (max-width: 900px) { .brand-panel { display: none; } }
+
+        .logo-area {
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-dot {
+            width: 12px;
+            height: 12px;
+            background: white;
+            border-radius: 3px;
+        }
+
+        .headline {
+            font-size: 36px;
+            font-weight: 800;
+            line-height: 1.1;
+            letter-spacing: -0.04em;
+        }
+
+        /* Login Side */
+        .form-panel {
+            flex: 1.2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        .form-content {
+            width: 100%;
+            max-width: 380px;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin: 0 0 10px;
+            letter-spacing: -0.03em;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 15px;
+            margin-bottom: 35px;
+        }
+
+        .input-group {
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        /* Django Input Styles */
+        input[type="text"], 
+        input[type="password"] {
+            width: 100%;
+            height: 46px;
+            padding: 0 15px;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 15px;
+            transition: all 0.2s;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: var(--brand-main);
+            box-shadow: 0 0 0 4px rgba(14, 97, 165, 0.1);
+        }
+
+        button {
+            width: 100%;
+            height: 46px;
+            background: var(--brand-main);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        button:hover {
+            background: var(--brand-dark);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .error-alert {
+            margin-top: 25px;
+            padding: 12px 15px;
+            background: #fff1f2;
+            border: 1px solid #fee2e2;
+            color: #9f1239;
+            border-radius: 8px;
+            font-size: 13px;
+            text-align: center;
+        }
+
+        .status-footer {
+            margin-top: 40px;
+            font-size: 12px;
+            color: var(--text-muted);
+            border-top: 1px solid #f1f5f9;
+            padding-top: 20px;
+        }
     </style>
-  </head>
-  <body>
-    <form class="card" method="post">
-      {% csrf_token %}
-      <h1>Support Panel</h1>
-      <p>Sign in with your admin account.</p>
-      <label>Username</label>
-      {{ form.username }}
-      <label>Password</label>
-      {{ form.password }}
-      <button type="submit">Sign in</button>
-      {% if error %}<div class="error">{{ error }}</div>{% endif %}
-    </form>
-  </body>
+</head>
+<body>
+
+    <div class="page-container">
+        <aside class="brand-panel">
+            <div class="logo-area">
+            
+            </div>
+            
+            <div class="main-text">
+                <h1 class="headline">SUPERFAN</h1>
+                <h3>Customer Support<br>Tickets Management.</h3>
+            </div>
+
+            <div class="footer-text" style="font-size: 12px; opacity: 0.6;">
+                Cloud Infrastructure Secured &bull; 128-bit Encryption V2.1  <br>2026 &bull; VisAi Appliances Private Limited.
+            </div>
+        </aside>
+
+        <main class="form-panel">
+            <div class="form-content">
+                <h1>Sign in</h1>
+                <p class="subtitle">Enter your admin credentials to continue.</p>
+
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="input-group">
+                        <label>Username</label>
+                        {{ form.username }}
+                    </div>
+
+                    <div class="input-group">
+                        <label>Password</label>
+                        {{ form.password }}
+                    </div>
+
+                    <button type="submit">Login</button>
+
+                    {% if error %}
+                    <div class="error-alert">
+                        <strong>Auth Error:</strong> {{ error }}
+                    </div>
+                    {% endif %}
+                </form>
+
+                <div class="status-footer">
+                    Forgot credentials? Contact <span style="color: var(--brand-main); font-weight: 500;">Admin</span>.
+                </div>
+            </div>
+        </main>
+    </div>
+
+</body>
 </html>
