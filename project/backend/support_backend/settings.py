@@ -75,6 +75,8 @@ USE_TZ = True
 STATIC_URL = 'static/'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+DOWNLOADS_URL = '/downloads/'
+DOWNLOADS_ROOT = Path('/var/www/html/downloads')
 
 REPLACEMENT_INVOICE_LOGO_DIR = BASE_DIR / 'invoice_assets' / 'logos'
 REPLACEMENT_INVOICE_HEADER_IMAGE = REPLACEMENT_INVOICE_LOGO_DIR / 'invoice_header.png'
