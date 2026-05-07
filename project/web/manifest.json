@@ -1,11 +1,11 @@
 {
-    "name": "project",
-    "short_name": "project",
+    "name": "Superfan Service",
+    "short_name": "Superfan Service",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Superfan Service application.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

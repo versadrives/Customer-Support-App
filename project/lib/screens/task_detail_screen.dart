@@ -72,21 +72,12 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   }
 
   Future<void> _complete() async {
-    if (_serialNumber.text.trim().isEmpty ||
-        _problemIdentified.text.trim().isEmpty ||
-        _action.text.trim().isEmpty ||
-        _comments.text.trim().isEmpty ||
-        _chargesCollected.text.trim().isEmpty ||
-        _kmsDriven.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fill all report fields')));
+    if (_serialNumber.text.trim().isEmpty || _problemIdentified.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Serial number and problem identified are required')));
       return;
     }
-    if (_beforePhoto == null || _afterPhoto == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please add before and after photos')));
-      return;
-    }
-    final kmsDriven = int.tryParse(_kmsDriven.text.trim());
-    if (kmsDriven == null) {
+    final kmsText = _kmsDriven.text.trim();
+    if (kmsText.isNotEmpty && int.tryParse(kmsText) == null) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter valid numbers for KM\'s driven')));
       return;
     }
@@ -95,15 +86,15 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         ticketId: widget.ticket.id,
         serialNumber: _serialNumber.text.trim(),
         problemIdentified: _problemIdentified.text.trim(),
-        actionTaken: _action.text.trim(),
-        pcbBoardNumber: _pcbBoardNumber.text.trim(),
-        comments: _comments.text.trim(),
-        chargesCollected: _chargesCollected.text.trim(),
-        kmsDriven: kmsDriven.toString(),
+        actionTaken: _action.text.trim().isEmpty ? null : _action.text.trim(),
+        pcbBoardNumber: _pcbBoardNumber.text.trim().isEmpty ? null : _pcbBoardNumber.text.trim(),
+        comments: _comments.text.trim().isEmpty ? null : _comments.text.trim(),
+        chargesCollected: _chargesCollected.text.trim().isEmpty ? null : _chargesCollected.text.trim(),
+        kmsDriven: kmsText.isEmpty ? null : kmsText,
         isCustomerPolite: _isCustomerPolite,
         difficultToAttend: _difficultToAttend,
-        beforeServicePhoto: _beforePhoto!,
-        afterServicePhoto: _afterPhoto!,
+        beforeServicePhoto: _beforePhoto,
+        afterServicePhoto: _afterPhoto,
       );
       widget.ticket.status = TicketStatus.completed;
       widget.ticket.completedAt = DateTime.now();
@@ -178,8 +169,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                       child: TextField(
                         controller: _serialNumber,
                         decoration: InputDecoration(
-                          labelText: 'Serial number',
-                          helperText: 'Type or scan',
+                          labelText: 'Serial number *',
+                          helperText: 'Required',
                           suffixIcon: IconButton(
                             tooltip: 'Scan serial number',
                             icon: const Icon(Icons.qr_code_scanner),
@@ -191,11 +182,17 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                TextField(controller: _problemIdentified, decoration: const InputDecoration(labelText: 'Problem identified')),
+                TextField(
+                  controller: _problemIdentified,
+                  decoration: const InputDecoration(
+                    labelText: 'Problem identified *',
+                    helperText: 'Required',
+                  ),
+                ),
                 const SizedBox(height: 8),
                 TextField(
                   controller: _action,
-                  decoration: const InputDecoration(labelText: 'Action taken'),
+                  decoration: const InputDecoration(labelText: 'Action taken', helperText: 'Optional'),
                 ),
                 const SizedBox(height: 8),
                 TextField(
@@ -211,7 +208,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                TextField(controller: _comments, decoration: const InputDecoration(labelText: 'Comments')),
+                TextField(controller: _comments, decoration: const InputDecoration(labelText: 'Comments', helperText: 'Optional')),
                 const SizedBox(height: 8),
                 Row(
                   children: [
@@ -219,7 +216,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                       child: TextField(
                         controller: _chargesCollected,
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: 'Charges collected'),
+                        decoration: const InputDecoration(labelText: 'Charges collected', helperText: 'Optional'),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -227,7 +224,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                       child: TextField(
                         controller: _kmsDriven,
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: 'KM\'s driven'),
+                        decoration: const InputDecoration(labelText: 'KM\'s driven', helperText: 'Optional'),
                       ),
                     ),
                   ],

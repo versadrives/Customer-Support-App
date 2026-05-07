@@ -12,11 +12,30 @@ class ApiClient {
   ApiClient._();
 
   static Uri _uri(String path) => Uri.parse('$apiBaseUrl$path');
+  static const List<int> _placeholderPngBytes = <int>[
+    137, 80, 78, 71, 13, 10, 26, 10,
+    0, 0, 0, 13, 73, 72, 68, 82,
+    0, 0, 0, 1, 0, 0, 0, 1,
+    8, 6, 0, 0, 0, 31, 21, 196,
+    137, 0, 0, 0, 13, 73, 68, 65,
+    84, 120, 156, 99, 248, 255, 255, 255,
+    127, 0, 9, 251, 3, 253, 5, 67,
+    69, 202, 0, 0, 0, 0, 73, 69,
+    78, 68, 174, 66, 96, 130,
+  ];
 
   static Future<http.MultipartFile> _multipartFromXFile(String field, XFile file) async {
     final bytes = await file.readAsBytes();
     final fileName = file.name.isNotEmpty ? file.name : '${DateTime.now().millisecondsSinceEpoch}.jpg';
     return http.MultipartFile.fromBytes(field, bytes, filename: fileName);
+  }
+
+  static http.MultipartFile _placeholderImage(String field) {
+    return http.MultipartFile.fromBytes(
+      field,
+      _placeholderPngBytes,
+      filename: '${field}_placeholder.png',
+    );
   }
 
   static Future<void> login({required String username, required String password, required AppRole role}) async {
@@ -164,15 +183,15 @@ class ApiClient {
     required int ticketId,
     required String serialNumber,
     required String problemIdentified,
-    required String actionTaken,
-    required String pcbBoardNumber,
-    required String comments,
-    required String chargesCollected,
-    required String kmsDriven,
+    String? actionTaken,
+    String? pcbBoardNumber,
+    String? comments,
+    String? chargesCollected,
+    String? kmsDriven,
     required bool isCustomerPolite,
     required bool difficultToAttend,
-    required XFile beforeServicePhoto,
-    required XFile afterServicePhoto,
+    XFile? beforeServicePhoto,
+    XFile? afterServicePhoto,
   }) async {
     final request = http.MultipartRequest('POST', _uri('/api/tickets/$ticketId/complete/'));
     request.headers.addAll(AuthStore.authHeaders());
@@ -180,16 +199,24 @@ class ApiClient {
       'service_provider_code': AuthStore.username ?? '',
       'serial_number': serialNumber,
       'problem_identified': problemIdentified,
-      'action_taken': actionTaken,
-      'pcb_board_number': pcbBoardNumber,
-      'comments': comments,
-      'charges_collected': chargesCollected,
-      'kms_driven': kmsDriven,
+      'action_taken': actionTaken ?? '',
+      'pcb_board_number': pcbBoardNumber ?? '',
+      'comments': comments ?? '',
+      'charges_collected': chargesCollected ?? '0',
+      'kms_driven': kmsDriven ?? '0',
       'is_customer_polite': isCustomerPolite.toString(),
       'difficult_to_attend': difficultToAttend.toString(),
     });
-    request.files.add(await _multipartFromXFile('before_service_photo', beforeServicePhoto));
-    request.files.add(await _multipartFromXFile('after_service_photo', afterServicePhoto));
+    if (beforeServicePhoto != null) {
+      request.files.add(await _multipartFromXFile('before_service_photo', beforeServicePhoto));
+    } else {
+      request.files.add(_placeholderImage('before_service_photo'));
+    }
+    if (afterServicePhoto != null) {
+      request.files.add(await _multipartFromXFile('after_service_photo', afterServicePhoto));
+    } else {
+      request.files.add(_placeholderImage('after_service_photo'));
+    }
 
     final streamed = await request.send();
     final res = await http.Response.fromStream(streamed);
