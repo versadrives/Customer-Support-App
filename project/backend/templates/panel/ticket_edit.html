@@ -25,6 +25,9 @@
       <div class="card" style="box-shadow:none;border:1px dashed var(--border);">
         <div style="font-weight:600;margin-bottom:8px;">Issue</div>
         <div>{{ ticket.issue|capfirst }}</div>
+        <div class="muted" style="margin-top:6px;">Notes: {{ ticket.issue_notes|default:"-"|capfirst }}</div>
+        <div class="muted">New Fan Complaint: {% if ticket.new_fan_complaint %}Yes{% else %}No{% endif %}</div>
+        <div class="muted">Repeated Complaint: {{ ticket.repeated_complaint_count|default:"-" }}</div>
         <div class="muted" style="margin-top:6px;">Location: {{ ticket.location|capfirst }}</div>
         <div class="muted">Service Type: {{ ticket.get_service_type_display }}</div>
       </div>
@@ -33,6 +36,7 @@
         <div>Model: {{ ticket.model|capfirst }}</div>
         <div>Serial: {{ ticket.serial_number|capfirst }}</div>
         <div class="muted">MFG Date: {{ ticket.mfg_date }}</div>
+        <div class="muted">Purchase Date: {{ ticket.purchase_date|date:"Y-m-d"|default:"-" }}</div>
       </div>
     </div>
     <form method="post" style="margin-top:12px;">

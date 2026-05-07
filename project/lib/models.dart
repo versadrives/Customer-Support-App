@@ -10,9 +10,13 @@ class AppTicket {
     required this.customerAddress,
     required this.location,
     required this.issue,
+    required this.issueNotes,
     required this.model,
     this.serialNumber,
     this.mfgDate,
+    this.purchaseDate,
+    required this.newFanComplaint,
+    this.repeatedComplaintCount,
     required this.status,
     this.engineerId,
     this.engineerName,
@@ -32,9 +36,13 @@ class AppTicket {
   final String customerAddress;
   final String location;
   final String issue;
+  final String issueNotes;
   final String model;
   final String? serialNumber;
   final DateTime? mfgDate;
+  final DateTime? purchaseDate;
+  final bool newFanComplaint;
+  final int? repeatedComplaintCount;
   TicketStatus status;
   int? engineerId;
   String? engineerName;
@@ -55,9 +63,13 @@ class AppTicket {
       customerAddress: (json['customer_address'] ?? '') as String,
       location: (json['location'] ?? '') as String,
       issue: (json['issue'] ?? '') as String,
+      issueNotes: (json['issue_notes'] ?? '') as String,
       model: (json['model'] ?? '') as String,
       serialNumber: json['serial_number'] as String?,
       mfgDate: _parseDate(json['mfg_date']),
+      purchaseDate: _parseDate(json['purchase_date']),
+      newFanComplaint: (json['new_fan_complaint'] ?? false) as bool,
+      repeatedComplaintCount: json['repeated_complaint_count'] as int?,
       status: ticketStatusFromApi((json['status'] ?? 'OPEN') as String),
       engineerId: json['assigned_engineer'] as int?,
       engineerName: json['assigned_engineer_name'] as String?,
@@ -135,6 +147,32 @@ class ReportData {
       beforeServicePhoto: json['before_service_photo'] as String?,
       afterServicePhoto: json['after_service_photo'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
+    );
+  }
+}
+
+class AppUpdateInfo {
+  AppUpdateInfo({
+    required this.version,
+    required this.buildNumber,
+    required this.apkUrl,
+    required this.notes,
+    required this.forceUpdate,
+  });
+
+  final String version;
+  final int buildNumber;
+  final String apkUrl;
+  final String notes;
+  final bool forceUpdate;
+
+  factory AppUpdateInfo.fromApi(Map<String, dynamic> json) {
+    return AppUpdateInfo(
+      version: (json['version'] ?? '').toString(),
+      buildNumber: (json['build_number'] ?? 0) as int,
+      apkUrl: (json['apk_url'] ?? '').toString(),
+      notes: (json['notes'] ?? '').toString(),
+      forceUpdate: (json['force_update'] ?? false) as bool,
     );
   }
 }

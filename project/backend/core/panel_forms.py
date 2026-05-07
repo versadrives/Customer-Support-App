@@ -24,9 +24,16 @@ class PanelTicketForm(forms.ModelForm):
     customer_phone = forms.CharField(label="Phone number")
     customer_address = forms.CharField(label="Address")
     issue_choice = forms.ChoiceField(label="Issue", required=False)
+    issue_notes = forms.CharField(label="Notes", required=False, widget=forms.Textarea(attrs={"rows": 3}))
     issue_custom = forms.CharField(label="Other issue", required=False)
     model_choice = forms.ChoiceField(label="Product", required=False)
     model_custom = forms.CharField(label="Other product", required=False)
+    new_fan_complaint = forms.ChoiceField(
+        label="New fan complaint",
+        required=True,
+        choices=(("yes", "Yes"), ("no", "No")),
+    )
+    repeated_complaint_count = forms.IntegerField(label="Repeated complaint", required=False, min_value=1)
 
     class Meta:
         model = Ticket
@@ -37,16 +44,20 @@ class PanelTicketForm(forms.ModelForm):
             "model",
             "serial_number",
             "mfg_date",
+            "purchase_date",
             "assigned_engineer",
         )
         widgets = {
             "mfg_date": forms.DateInput(attrs={"type": "date"}),
+            "purchase_date": forms.DateInput(attrs={"type": "date"}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["assigned_engineer"].queryset = EngineerProfile.objects.select_related("user").filter(active=True).order_by("user__username")
         self.fields["assigned_engineer"].required = False
+        if self.instance and self.instance.pk:
+            self.fields["new_fan_complaint"].initial = "yes" if self.instance.new_fan_complaint else "no"
         issue_choices = [("", "Select issue")]
         issue_choices.extend((option.name, option.name) for option in IssueOption.objects.filter(active=True))
         issue_choices.append(("__other__", "Other"))
@@ -64,6 +75,7 @@ class PanelTicketForm(forms.ModelForm):
         model_custom = _capfirst(cleaned_data.get("model_custom", ""))
         service_type = cleaned_data.get("service_type")
         assigned_engineer = cleaned_data.get("assigned_engineer")
+        new_fan_complaint = cleaned_data.get("new_fan_complaint")
 
         if issue_choice == "__other__":
             if not issue_custom:
@@ -90,6 +102,9 @@ class PanelTicketForm(forms.ModelForm):
         if service_type == TicketServiceType.REPLACEMENT and assigned_engineer:
             self.add_error("assigned_engineer", "Replacement tickets cannot be assigned to an engineer.")
 
+        if new_fan_complaint == "yes":
+            cleaned_data["repeated_complaint_count"] = None
+
         return cleaned_data
 
     def save(self, commit=True):
@@ -105,9 +120,13 @@ class PanelTicketForm(forms.ModelForm):
         self.instance.customer = customer
         self.instance.location = _capfirst(self.cleaned_data.get("location", ""))
         self.instance.issue = self.cleaned_data.get("resolved_issue", "")
+        self.instance.issue_notes = _capfirst(self.cleaned_data.get("issue_notes", ""))
         self.instance.model = self.cleaned_data.get("resolved_model", "")
         self.instance.serial_number = _capfirst(self.cleaned_data.get("serial_number", ""))
         self.instance.ticket_id = _capfirst(self.cleaned_data.get("ticket_id", ""))
+        self.instance.purchase_date = self.cleaned_data.get("purchase_date")
+        self.instance.new_fan_complaint = self.cleaned_data.get("new_fan_complaint") == "yes"
+        self.instance.repeated_complaint_count = None if self.instance.new_fan_complaint else self.cleaned_data.get("repeated_complaint_count")
         self.instance.service_type = self.cleaned_data.get("service_type")
         if self.instance.service_type == TicketServiceType.REPLACEMENT:
             self.instance.assigned_engineer = None
@@ -165,7 +184,6 @@ class PanelReplacementForm(forms.ModelForm):
         fields = (
             "ref_date",
             "client_ref_date",
-            "ref_number",
             "custom_challan_number",
             "client_ref_number",
             "contact_name",
@@ -188,11 +206,16 @@ class PanelReplacementForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         replacement = self.instance
         customer = getattr(self.ticket, "customer", None)
+        default_contact_name = (customer.contact_name or customer.name) if customer else ""
+        default_contact_phone = customer.contact_phone if customer else ""
+        default_address = customer.address if customer else ""
+        default_client_ref_number = self.ticket.ticket_id
+
         if not replacement.pk:
-            self.fields["contact_name"].initial = (customer.contact_name or customer.name) if customer else ""
-            self.fields["contact_phone"].initial = customer.contact_phone if customer else ""
-            self.fields["billing_address"].initial = customer.address if customer else ""
-            self.fields["ref_number"].initial = self.ticket.ticket_id
+            self.initial["contact_name"] = default_contact_name
+            self.initial["contact_phone"] = default_contact_phone
+            self.initial["billing_address"] = default_address
+            self.initial["client_ref_number"] = default_client_ref_number
             default_name = self.ticket.model or "Full Product"
             default_description = self.ticket.issue or ""
             self.line_item_rows = [
@@ -223,6 +246,12 @@ class PanelReplacementForm(forms.ModelForm):
                         "serial_number": self.ticket.serial_number or "",
                     }
                 ]
+
+        if replacement.pk:
+            self.initial["contact_name"] = replacement.contact_name or default_contact_name
+            self.initial["contact_phone"] = replacement.contact_phone or default_contact_phone
+            self.initial["billing_address"] = replacement.billing_address or default_address
+            self.initial["client_ref_number"] = replacement.client_ref_number or default_client_ref_number
 
         if self.is_bound:
             self.line_item_rows = self.extract_line_items(self.data)
@@ -300,9 +329,11 @@ class PanelReplacementForm(forms.ModelForm):
             instance.created_by = self.created_by
         if not instance.subject:
             instance.subject = f"Replacement - {self.ticket.ticket_id}"
+        instance.ref_number = self.ticket.ticket_id
         if not instance.organization_name:
             customer = getattr(self.ticket, "customer", None)
             instance.organization_name = _capfirst(customer.name) if customer and customer.name else ""
+        instance.client_ref_number = _capfirst(self.cleaned_data.get("client_ref_number", "")) or self.ticket.ticket_id
         instance.contact_name = _capfirst(self.cleaned_data.get("contact_name", ""))
         instance.contact_phone = self.cleaned_data.get("contact_phone", "").strip()
         instance.billing_city = _capfirst(self.cleaned_data.get("billing_city", ""))

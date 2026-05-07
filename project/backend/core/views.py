@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.http import HttpResponse
 from django.db import IntegrityError
 from django.db.models import Q
@@ -49,13 +50,12 @@ class TicketViewSet(viewsets.ModelViewSet):
             return qs
         if self.request.user and self.request.user.is_authenticated:
             profile = EngineerProfile.objects.filter(user=self.request.user).first()
-            profile_id = profile.id if profile else None
+            if not profile:
+                return qs.none()
             return qs.filter(
                 Q(assigned_engineer__user=self.request.user)
-                | Q(assigned_engineer_id=profile_id)
-                | Q(assigned_engineer__user__username__icontains=self.request.user.username)
-                | Q(assigned_engineer__user__email=self.request.user.email)
-            )
+                | Q(assigned_engineer=profile)
+            ).distinct()
         return qs.none()
 
     def perform_create(self, serializer):
@@ -308,6 +308,20 @@ def me(request):
             'engineer_profile_id': getattr(profile, 'id', None),
             'engineer_profile_user_id': getattr(profile, 'user_id', None),
             'engineer_active': getattr(profile, 'active', None),
+        }
+    )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def app_update_info(request):
+    return Response(
+        {
+            'version': getattr(settings, 'APP_UPDATE_VERSION', '1.0.0'),
+            'build_number': int(getattr(settings, 'APP_UPDATE_BUILD_NUMBER', 1)),
+            'apk_url': getattr(settings, 'APP_UPDATE_APK_URL', ''),
+            'notes': getattr(settings, 'APP_UPDATE_NOTES', ''),
+            'force_update': bool(getattr(settings, 'APP_UPDATE_FORCE', False)),
         }
     )
 

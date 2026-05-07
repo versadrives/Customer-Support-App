@@ -68,6 +68,26 @@
           {% if form.issue_choice.errors %}<div class="field-help" style="color:#b42318;">{{ form.issue_choice.errors|join:", " }}</div>{% endif %}
         </div>
         <div>
+          <label>Purchase Date</label>
+          {{ form.purchase_date }}
+          {% if form.purchase_date.errors %}<div class="field-help" style="color:#b42318;">{{ form.purchase_date.errors|join:", " }}</div>{% endif %}
+        </div>
+        <div>
+          <label>New Fan Complaint</label>
+          {{ form.new_fan_complaint }}
+          {% if form.new_fan_complaint.errors %}<div class="field-help" style="color:#b42318;">{{ form.new_fan_complaint.errors|join:", " }}</div>{% endif %}
+        </div>
+        <div>
+          <label>Repeated Complaint Count</label>
+          {{ form.repeated_complaint_count }}
+          {% if form.repeated_complaint_count.errors %}<div class="field-help" style="color:#b42318;">{{ form.repeated_complaint_count.errors|join:", " }}</div>{% endif %}
+        </div>
+        <div style="grid-column:1/4;">
+          <label>Issue Notes</label>
+          {{ form.issue_notes }}
+          {% if form.issue_notes.errors %}<div class="field-help" style="color:#b42318;">{{ form.issue_notes.errors|join:", " }}</div>{% endif %}
+        </div>
+        <div>
           <label>Product</label>
           <div style="display:flex;gap:6px;align-items:center;">
             {{ form.model_choice }}
@@ -125,6 +145,8 @@
       var removeProductBtn = document.getElementById("remove-product-btn");
       var serviceTypeSelect = document.getElementById("id_service_type");
       var engineerSelect = document.getElementById("id_assigned_engineer");
+      var newFanComplaintSelect = document.getElementById("id_new_fan_complaint");
+      var repeatedComplaintInput = document.getElementById("id_repeated_complaint_count");
 
       function showNewIssueInput() {
         newIssueWrap.style.display = "flex";
@@ -147,6 +169,12 @@
         var isReplacement = serviceTypeSelect.value === "REPLACEMENT";
         engineerSelect.disabled = isReplacement;
         if (isReplacement) { engineerSelect.value = ""; }
+      }
+      function syncRepeatedComplaintAvailability() {
+        if (!newFanComplaintSelect || !repeatedComplaintInput) return;
+        var isNewComplaint = newFanComplaintSelect.value === "yes";
+        repeatedComplaintInput.disabled = isNewComplaint;
+        if (isNewComplaint) { repeatedComplaintInput.value = ""; }
       }
 
       issueSelect.addEventListener("change", function () {
@@ -247,6 +275,10 @@
       if (serviceTypeSelect) {
         serviceTypeSelect.addEventListener("change", syncAssignmentAvailability);
         syncAssignmentAvailability();
+      }
+      if (newFanComplaintSelect) {
+        newFanComplaintSelect.addEventListener("change", syncRepeatedComplaintAvailability);
+        syncRepeatedComplaintAvailability();
       }
       if (productSelect && productSelect.value === "__other__") { showNewProductInput(); }
     })();

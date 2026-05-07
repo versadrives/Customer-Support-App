@@ -12,6 +12,11 @@
           <tr><th>Log Date</th><td>{{ report.created_at|date:"Y-m-d H:i" }}</td></tr>
           <tr><th>Ticket No</th><td>{{ report.ticket.ticket_id }}</td></tr>
           <tr><th>Attended By</th><td>{{ report.engineer.display_name }}</td></tr>
+          <tr><th>Issue</th><td>{{ report.ticket.issue|capfirst }}</td></tr>
+          <tr><th>Issue Notes</th><td>{{ report.ticket.issue_notes|default:"-"|capfirst }}</td></tr>
+          <tr><th>Purchase Date</th><td>{{ report.ticket.purchase_date|date:"Y-m-d"|default:"-" }}</td></tr>
+          <tr><th>New Fan Complaint</th><td>{% if report.ticket.new_fan_complaint %}Yes{% else %}No{% endif %}</td></tr>
+          <tr><th>Repeated Complaint</th><td>{{ report.ticket.repeated_complaint_count|default:"-" }}</td></tr>
           <tr><th>Service Provider Code</th><td>{{ report.service_provider_code }}</td></tr>
           <tr><th>Serial Number</th><td>{{ report.serial_number }}</td></tr>
           <tr><th>Problem Identified</th><td>{{ report.problem_identified|capfirst }}</td></tr>

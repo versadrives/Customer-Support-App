@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../api/api_client.dart';
 import '../api/auth_store.dart';
+import '../models.dart';
 import 'login_screen.dart';
 
 class EngineerProfileScreen extends StatefulWidget {
@@ -17,6 +20,16 @@ class _EngineerProfileScreenState extends State<EngineerProfileScreen> {
   final _newPw = TextEditingController();
   final _confirmPw = TextEditingController();
   bool _saving = false;
+  bool _checkingUpdate = true;
+  bool _openingUpdate = false;
+  String _appVersionLabel = '-';
+  AppUpdateInfo? _updateInfo;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUpdateInfo();
+  }
 
   @override
   void dispose() {
@@ -24,6 +37,60 @@ class _EngineerProfileScreenState extends State<EngineerProfileScreen> {
     _newPw.dispose();
     _confirmPw.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadUpdateInfo() async {
+    setState(() => _checkingUpdate = true);
+    PackageInfo? packageInfo;
+    try {
+      packageInfo = await PackageInfo.fromPlatform();
+      if (!mounted) return;
+      setState(() {
+        _appVersionLabel = '${packageInfo!.version}+${packageInfo.buildNumber}';
+      });
+    } catch (_) {}
+
+    try {
+      final updateInfo = await ApiClient.fetchAppUpdateInfo();
+      if (!mounted) return;
+      setState(() {
+        _updateInfo = updateInfo;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _updateInfo = null;
+      });
+    } finally {
+      if (mounted) setState(() => _checkingUpdate = false);
+    }
+  }
+
+  Future<void> _downloadUpdate() async {
+    final info = _updateInfo;
+    if (info == null || info.apkUrl.isEmpty) return;
+    setState(() => _openingUpdate = true);
+    try {
+      final uri = Uri.parse(info.apkUrl);
+      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!launched && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open download link.')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Update download failed. $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _openingUpdate = false);
+    }
+  }
+
+  bool get _hasUpdate {
+    final info = _updateInfo;
+    if (info == null) return false;
+    final parts = _appVersionLabel.split('+');
+    final currentBuild = parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0;
+    return info.buildNumber > currentBuild;
   }
 
   Future<void> _logout() async {
@@ -101,6 +168,57 @@ class _EngineerProfileScreenState extends State<EngineerProfileScreen> {
               ),
               const SizedBox(height: 4),
               const SizedBox(height: 6),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 18, offset: const Offset(0, 10))],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('App Update', style: TextStyle(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 8),
+              Text('Current Version: $_appVersionLabel', style: const TextStyle(color: Color(0xFF64748B))),
+              const SizedBox(height: 8),
+              if (_checkingUpdate)
+                const Text('Checking for updates...', style: TextStyle(color: Color(0xFF64748B)))
+              else if (_updateInfo == null)
+                const Text('Unable to check updates right now.', style: TextStyle(color: Color(0xFF64748B)))
+              else ...[
+                Text(
+                  _hasUpdate ? 'New version available: ${_updateInfo!.version}+${_updateInfo!.buildNumber}' : 'App is up to date.',
+                  style: const TextStyle(color: Color(0xFF334155)),
+                ),
+                if (_updateInfo!.notes.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(_updateInfo!.notes, style: const TextStyle(color: Color(0xFF64748B))),
+                ],
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: _hasUpdate && !_openingUpdate ? _downloadUpdate : null,
+                        icon: const Icon(Icons.system_update_alt),
+                        label: Text(_openingUpdate ? 'Opening...' : 'Download Update'),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    IconButton(
+                      tooltip: 'Refresh update check',
+                      onPressed: _checkingUpdate ? null : _loadUpdateInfo,
+                      icon: const Icon(Icons.refresh),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),

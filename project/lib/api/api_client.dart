@@ -13,6 +13,12 @@ class ApiClient {
 
   static Uri _uri(String path) => Uri.parse('$apiBaseUrl$path');
 
+  static Future<http.MultipartFile> _multipartFromXFile(String field, XFile file) async {
+    final bytes = await file.readAsBytes();
+    final fileName = file.name.isNotEmpty ? file.name : '${DateTime.now().millisecondsSinceEpoch}.jpg';
+    return http.MultipartFile.fromBytes(field, bytes, filename: fileName);
+  }
+
   static Future<void> login({required String username, required String password, required AppRole role}) async {
     final res = await http.post(
       _uri('/api/auth/token/'),
@@ -35,6 +41,14 @@ class ApiClient {
       throw Exception('Failed to load profile (${res.statusCode})');
     }
     return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  static Future<AppUpdateInfo> fetchAppUpdateInfo() async {
+    final res = await http.get(_uri('/api/app-update/'), headers: AuthStore.authHeaders());
+    if (res.statusCode != 200) {
+      throw Exception('Failed to load app update info (${res.statusCode})');
+    }
+    return AppUpdateInfo.fromApi(jsonDecode(res.body) as Map<String, dynamic>);
   }
 
   static Future<void> changePassword({required String oldPassword, required String newPassword}) async {
@@ -87,9 +101,13 @@ class ApiClient {
     required String customerAddress,
     required String location,
     required String issue,
+    String? issueNotes,
     required String model,
     String? serialNumber,
     String? mfgDate,
+    String? purchaseDate,
+    bool? newFanComplaint,
+    int? repeatedComplaintCount,
   }) async {
     final body = <String, dynamic>{
       'ticket_id': _generateTicketId(),
@@ -100,8 +118,12 @@ class ApiClient {
       'issue': issue,
       'model': model,
     };
+    if (issueNotes != null && issueNotes.isNotEmpty) body['issue_notes'] = issueNotes;
     if (serialNumber != null && serialNumber.isNotEmpty) body['serial_number'] = serialNumber;
     if (mfgDate != null && mfgDate.isNotEmpty) body['mfg_date'] = mfgDate;
+    if (purchaseDate != null && purchaseDate.isNotEmpty) body['purchase_date'] = purchaseDate;
+    if (newFanComplaint != null) body['new_fan_complaint'] = newFanComplaint;
+    if (repeatedComplaintCount != null) body['repeated_complaint_count'] = repeatedComplaintCount;
     final res = await http.post(
       _uri('/api/tickets/'),
       headers: {'Content-Type': 'application/json', ...AuthStore.authHeaders()},
@@ -166,8 +188,8 @@ class ApiClient {
       'is_customer_polite': isCustomerPolite.toString(),
       'difficult_to_attend': difficultToAttend.toString(),
     });
-    request.files.add(await http.MultipartFile.fromPath('before_service_photo', beforeServicePhoto.path));
-    request.files.add(await http.MultipartFile.fromPath('after_service_photo', afterServicePhoto.path));
+    request.files.add(await _multipartFromXFile('before_service_photo', beforeServicePhoto));
+    request.files.add(await _multipartFromXFile('after_service_photo', afterServicePhoto));
 
     final streamed = await request.send();
     final res = await http.Response.fromStream(streamed);

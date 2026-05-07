@@ -10,6 +10,7 @@ from datetime import timedelta
 import csv
 from types import SimpleNamespace
 
+from django.core.paginator import Paginator
 from django.db.models import Q
 from .models import AdminProfile, Customer, EngineerProfile, IssueOption, Item, Replacement, ReplacementStatus, Report, Ticket, TicketServiceType, TicketStatus
 from .panel_forms import PanelEngineerForm, PanelLoginForm, PanelReplacementForm, PanelTicketForm, PanelTicketStatusForm
@@ -47,6 +48,10 @@ def _display_datetime(value):
     return timezone.localtime(value).strftime("%Y-%m-%d %H:%M") if hasattr(value, "hour") else value.strftime("%Y-%m-%d")
 
 
+def _display_bool(value):
+    return "Yes" if value else "No"
+
+
 def _build_report_rows(service_reports, replacements):
     rows = []
 
@@ -73,10 +78,14 @@ def _build_report_rows(service_reports, replacements):
                     _display_datetime(report.ticket.created_at),
                     _display_datetime(report.ticket.started_at),
                     _display_datetime(report.ticket.completed_at),
+                    _display_datetime(report.ticket.purchase_date),
+                    _display_bool(report.ticket.new_fan_complaint),
+                    report.ticket.repeated_complaint_count or "",
                     _display_datetime(report.created_at),
                     report.service_provider_code,
                     report.serial_number,
                     report.problem_identified,
+                    report.ticket.issue_notes,
                     report.action_taken,
                     report.pcb_board_number,
                     report.comments,
@@ -100,7 +109,7 @@ def _build_report_rows(service_reports, replacements):
                 service_type=ticket.service_type,
                 status=ticket.status,
                 created_at=replacement.updated_at,
-                service_provider_code=replacement.custom_challan_number or replacement.ref_number or "",
+                service_provider_code=replacement.custom_challan_number or ticket.ticket_id or "",
                 charges_collected="",
                 kms_driven="",
                 detail_url=f"/panel/reports/replacement/{ticket.id}/",
@@ -114,10 +123,14 @@ def _build_report_rows(service_reports, replacements):
                     _display_datetime(ticket.created_at),
                     _display_datetime(ticket.started_at),
                     _display_datetime(ticket.completed_at),
+                    _display_datetime(ticket.purchase_date),
+                    _display_bool(ticket.new_fan_complaint),
+                    ticket.repeated_complaint_count or "",
                     _display_datetime(replacement.updated_at),
-                    replacement.custom_challan_number or replacement.ref_number or "",
+                    replacement.custom_challan_number or ticket.ticket_id or "",
                     ticket.serial_number,
                     ticket.issue,
+                    ticket.issue_notes,
                     replacement.items_summary,
                     "",
                     replacement.billing_address,
@@ -229,11 +242,11 @@ def panel_tickets(request):
             | Q(customer__name__icontains=search)
             | Q(customer__contact_phone__icontains=search)
         )
-    if date_from:
+    if date_from and not search:
         parsed = parse_date(date_from)
         if parsed:
             tickets = tickets.filter(created_at__date__gte=parsed)
-    if date_to:
+    if date_to and not search:
         parsed = parse_date(date_to)
         if parsed:
             tickets = tickets.filter(created_at__date__lte=parsed)
@@ -242,7 +255,18 @@ def panel_tickets(request):
         tickets = tickets.filter(created_at__date=today)
         date_from = date_to = today.isoformat()
 
+    filters_applied = any([service_type, status, engineer_id, customer_id, search, date_from, date_to])
     tickets = tickets.order_by("-created_at")
+    page_obj = None
+    page_query = ""
+    if filters_applied:
+        paginator = Paginator(tickets, 10)
+        page_obj = paginator.get_page(request.GET.get("page"))
+        tickets = page_obj.object_list
+        page_query_params = request.GET.copy()
+        page_query_params.pop("page", None)
+        page_query = page_query_params.urlencode()
+
     engineers = EngineerProfile.objects.select_related("user").order_by("user__username")
     customers = Customer.objects.order_by("name")
     return render(
@@ -253,6 +277,8 @@ def panel_tickets(request):
             "page_title": "Tickets",
             "engineers": engineers,
             "customers": customers,
+            "page_obj": page_obj,
+            "page_query": page_query,
             "filters": {
                 "service_type": service_type,
                 "status": status,
@@ -441,11 +467,11 @@ def panel_replacements(request):
             | Q(customer__name__icontains=search)
             | Q(customer__contact_phone__icontains=search)
         )
-    if date_from:
+    if date_from and not search:
         parsed = parse_date(date_from)
         if parsed:
             tickets = tickets.filter(created_at__date__gte=parsed)
-    if date_to:
+    if date_to and not search:
         parsed = parse_date(date_to)
         if parsed:
             tickets = tickets.filter(created_at__date__lte=parsed)
@@ -454,7 +480,18 @@ def panel_replacements(request):
         tickets = tickets.filter(created_at__date=today)
         date_from = date_to = today.isoformat()
 
+    filters_applied = any([status, search, date_from, date_to])
     tickets = tickets.order_by("-created_at")
+    page_obj = None
+    page_query = ""
+    if filters_applied:
+        paginator = Paginator(tickets, 10)
+        page_obj = paginator.get_page(request.GET.get("page"))
+        tickets = page_obj.object_list
+        page_query_params = request.GET.copy()
+        page_query_params.pop("page", None)
+        page_query = page_query_params.urlencode()
+
     replacements = [{"ticket": ticket, "replacement": _get_replacement(ticket)} for ticket in tickets]
 
     return render(
@@ -463,6 +500,8 @@ def panel_replacements(request):
         {
             "replacements": replacements,
             "page_title": "Replacement",
+            "page_obj": page_obj,
+            "page_query": page_query,
             "filters": {
                 "status": status,
                 "search": search,
@@ -592,10 +631,14 @@ def panel_reports(request):
             "Ticket Created",
             "Ticket Started",
             "Ticket Completed",
+            "Purchase Date",
+            "New Fan Complaint",
+            "Repeated Complaint Count",
             "Report Created",
             "Service Provider Code",
             "Serial Number",
             "Problem Identified",
+            "Issue Notes",
             "Action Taken",
             "PCB Board Number",
             "Comments",

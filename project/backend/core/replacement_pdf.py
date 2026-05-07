@@ -171,7 +171,7 @@ def _build_story(replacement):
     ref_table = Table(
         [
             [
-                Paragraph(f"<b>Our Ref. No.:</b> {escape(_clean_text(replacement.custom_challan_number or replacement.ref_number or replacement.ticket.ticket_id))}", normal),
+                Paragraph(f"<b>Our Ref. No.:</b> {escape(_clean_text(replacement.custom_challan_number or replacement.ticket.ticket_id))}", normal),
                 Paragraph(f"<b>Date:</b> {escape(_format_date(replacement.ref_date or replacement.updated_at))}", right),
             ],
             [
@@ -279,7 +279,7 @@ def build_replacement_invoice_response(replacement):
     )
     doc.build(_build_story(replacement))
 
-    filename_root = replacement.custom_challan_number or replacement.ref_number or replacement.ticket.ticket_id
+    filename_root = replacement.custom_challan_number or replacement.ticket.ticket_id
     filename = f"replacement_invoice_{_clean_text(filename_root).replace(' ', '_')}.pdf"
     response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
