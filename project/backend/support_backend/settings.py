@@ -119,8 +119,8 @@ X_FRAME_OPTIONS = 'DENY'
 
 # Mobile app update metadata.
 APP_UPDATE_VERSION = '1.0.2'
-APP_UPDATE_BUILD_NUMBER = 3
+APP_UPDATE_BUILD_NUMBER = 4
 APP_UPDATE_APK_URL = 'http://13.201.34.16/downloads/superfan-release.apk'
-APP_UPDATE_NOTES = 'Updated with Application name.'
+APP_UPDATE_NOTES = 'Updated with Application name and bug fixes.'
 APP_UPDATE_FORCE = False
-# Last Update date 07-05-2026
+# Last Update date 12-05-2026
