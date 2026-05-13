@@ -226,11 +226,12 @@ class ApiClient {
     return ReportData.fromApi(jsonDecode(res.body) as Map<String, dynamic>);
   }
 
-  static Future<List<ReportData>> fetchReports({String? date, String? dateFrom, String? dateTo}) async {
+  static Future<List<ReportData>> fetchReports({String? date, String? dateFrom, String? dateTo, String? ticketId}) async {
     final params = <String, String>{};
     if (date != null && date.isNotEmpty) params['date'] = date;
     if (dateFrom != null && dateFrom.isNotEmpty) params['date_from'] = dateFrom;
     if (dateTo != null && dateTo.isNotEmpty) params['date_to'] = dateTo;
+    if (ticketId != null && ticketId.isNotEmpty) params['ticket_id'] = ticketId;
     final uri = params.isEmpty ? _uri('/api/reports/') : _uri('/api/reports/').replace(queryParameters: params);
     final res = await http.get(uri, headers: AuthStore.authHeaders());
     if (res.statusCode != 200) {

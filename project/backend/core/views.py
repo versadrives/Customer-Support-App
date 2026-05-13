@@ -216,6 +216,9 @@ class ReportViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = super().get_queryset()
+        ticket_id = self.request.query_params.get('ticket_id')
+        if ticket_id:
+            qs = qs.filter(ticket__ticket_id=ticket_id)
         if IsAdmin().has_permission(self.request, self):
             pass
         if hasattr(self.request.user, 'engineer_profile'):

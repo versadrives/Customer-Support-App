@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../api/api_client.dart';
+import '../api/api_config.dart';
 import '../api/auth_store.dart';
 import '../models.dart';
 import '../screens/qr_scan_screen.dart';
@@ -32,6 +33,14 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   final _picker = ImagePicker();
   XFile? _beforePhoto;
   XFile? _afterPhoto;
+
+  late Future<ReportData?> _reportFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _reportFuture = ApiClient.fetchReports(ticketId: widget.ticket.ticketId).then((list) => list.isNotEmpty ? list.first : null);
+  }
 
   @override
   void dispose() {
@@ -115,6 +124,146 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     setState(() {});
   }
 
+  Widget _buildReportForm({String? errorMessage}) {
+    final t = widget.ticket;
+    return Panel(
+      title: 'Service Report',
+      icon: Icons.description_outlined,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (errorMessage != null) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.red),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      errorMessage,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _serialNumber,
+                  decoration: InputDecoration(
+                    labelText: 'Serial number *',
+                    helperText: 'Required',
+                    suffixIcon: IconButton(
+                      tooltip: 'Scan serial number',
+                      icon: const Icon(Icons.qr_code_scanner),
+                      onPressed: () => _scanInto(_serialNumber, title: 'Scan Serial Number'),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _problemIdentified,
+            decoration: const InputDecoration(
+              labelText: 'Problem identified *',
+              helperText: 'Required',
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _action,
+            decoration: const InputDecoration(labelText: 'Action taken', helperText: 'Optional'),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _pcbBoardNumber,
+            decoration: InputDecoration(
+              labelText: 'PCB board number',
+              helperText: 'Optional',
+              suffixIcon: IconButton(
+                tooltip: 'Scan PCB barcode',
+                icon: const Icon(Icons.qr_code_scanner),
+                onPressed: () => _scanInto(_pcbBoardNumber, title: 'Scan PCB Barcode (Optional)'),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(controller: _comments, decoration: const InputDecoration(labelText: 'Comments', helperText: 'Optional')),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _chargesCollected,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Charges collected', helperText: 'Optional'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: TextField(
+                  controller: _kmsDriven,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'KM\'s driven', helperText: 'Optional'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Is customer polite?'),
+            value: _isCustomerPolite,
+            onChanged: (v) => setState(() => _isCustomerPolite = v),
+          ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Difficult to attend'),
+            value: _difficultToAttend,
+            onChanged: (v) => setState(() => _difficultToAttend = v),
+          ),
+          const SizedBox(height: 8),
+          _PhotoPickerRow(
+            title: 'Before Service Photo',
+            file: _beforePhoto,
+            onCamera: () => _pickPhoto(before: true, source: ImageSource.camera),
+            onGallery: () => _pickPhoto(before: true, source: ImageSource.gallery),
+          ),
+          const SizedBox(height: 12),
+          _PhotoPickerRow(
+            title: 'After Service Photo',
+            file: _afterPhoto,
+            onCamera: () => _pickPhoto(before: false, source: ImageSource.camera),
+            onGallery: () => _pickPhoto(before: false, source: ImageSource.gallery),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: t.status == TicketStatus.completed ? null : _complete,
+              icon: const Icon(Icons.check_circle_outline),
+              label: const Text('Submit Report & Complete'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = widget.ticket;
@@ -158,115 +307,94 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               ],
             ),
           ),
-          Panel(
-            title: 'Service Report',
-            icon: Icons.description_outlined,
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _serialNumber,
-                        decoration: InputDecoration(
-                          labelText: 'Serial number *',
-                          helperText: 'Required',
-                          suffixIcon: IconButton(
-                            tooltip: 'Scan serial number',
-                            icon: const Icon(Icons.qr_code_scanner),
-                            onPressed: () => _scanInto(_serialNumber, title: 'Scan Serial Number'),
-                          ),
+          FutureBuilder<ReportData?>(
+            future: _reportFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Panel(
+                  title: 'Service Report',
+                  icon: Icons.description_outlined,
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+              if (snapshot.hasError) {
+                return _buildReportForm(errorMessage: 'Unable to load existing report: ${snapshot.error}');
+              }
+              final report = snapshot.data;
+              if (report != null) {
+                // Show existing report in read-only format
+                return Panel(
+                  title: 'Service Report (Submitted)',
+                  icon: Icons.description_outlined,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Serial Number: ${report.serialNumber}'),
+                      const SizedBox(height: 4),
+                      Text('Problem Identified: ${report.problemIdentified}'),
+                      const SizedBox(height: 4),
+                      Text('Action Taken: ${report.actionTaken.isNotEmpty ? report.actionTaken : 'None'}'),
+                      const SizedBox(height: 4),
+                      Text('PCB Board Number: ${report.pcbBoardNumber.isNotEmpty ? report.pcbBoardNumber : 'None'}'),
+                      const SizedBox(height: 4),
+                      Text('Comments: ${report.comments.isNotEmpty ? report.comments : 'None'}'),
+                      const SizedBox(height: 4),
+                      Text('Charges Collected: ${report.chargesCollected}'),
+                      const SizedBox(height: 4),
+                      Text('KM\'s Driven: ${report.kmsDriven}'),
+                      const SizedBox(height: 4),
+                      Text('Customer Polite: ${report.isCustomerPolite ? 'Yes' : 'No'}'),
+                      const SizedBox(height: 4),
+                      Text('Difficult to Attend: ${report.difficultToAttend ? 'Yes' : 'No'}'),
+                      const SizedBox(height: 8),
+                      if (report.beforeServicePhoto != null || report.afterServicePhoto != null) ...[
+                        const Text('Photos:', style: TextStyle(fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            if (report.beforeServicePhoto != null)
+                              Expanded(
+                                child: Container(
+                                  height: 100,
+                                  decoration: BoxDecoration(
+                                    border: Border.all(color: Colors.grey),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Image.network(
+                                    '$apiBaseUrl/media/${report.beforeServicePhoto}',
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) =>
+                                        const Icon(Icons.broken_image, size: 50),
+                                  ),
+                                ),
+                              ),
+                            const SizedBox(width: 8),
+                            if (report.afterServicePhoto != null)
+                              Expanded(
+                                child: Container(
+                                  height: 100,
+                                  decoration: BoxDecoration(
+                                    border: Border.all(color: Colors.grey),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Image.network(
+                                    '$apiBaseUrl/media/${report.afterServicePhoto}',
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) =>
+                                        const Icon(Icons.broken_image, size: 50),
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _problemIdentified,
-                  decoration: const InputDecoration(
-                    labelText: 'Problem identified *',
-                    helperText: 'Required',
+                      ],
+                    ],
                   ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _action,
-                  decoration: const InputDecoration(labelText: 'Action taken', helperText: 'Optional'),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _pcbBoardNumber,
-                  decoration: InputDecoration(
-                    labelText: 'PCB board number',
-                    helperText: 'Optional',
-                    suffixIcon: IconButton(
-                      tooltip: 'Scan PCB barcode',
-                      icon: const Icon(Icons.qr_code_scanner),
-                      onPressed: () => _scanInto(_pcbBoardNumber, title: 'Scan PCB Barcode (Optional)'),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(controller: _comments, decoration: const InputDecoration(labelText: 'Comments', helperText: 'Optional')),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _chargesCollected,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: 'Charges collected', helperText: 'Optional'),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: TextField(
-                        controller: _kmsDriven,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(labelText: 'KM\'s driven', helperText: 'Optional'),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Is customer polite?'),
-                  value: _isCustomerPolite,
-                  onChanged: (v) => setState(() => _isCustomerPolite = v),
-                ),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Difficult to attend'),
-                  value: _difficultToAttend,
-                  onChanged: (v) => setState(() => _difficultToAttend = v),
-                ),
-                const SizedBox(height: 8),
-                _PhotoPickerRow(
-                  title: 'Before Service Photo',
-                  file: _beforePhoto,
-                  onCamera: () => _pickPhoto(before: true, source: ImageSource.camera),
-                  onGallery: () => _pickPhoto(before: true, source: ImageSource.gallery),
-                ),
-                const SizedBox(height: 12),
-                _PhotoPickerRow(
-                  title: 'After Service Photo',
-                  file: _afterPhoto,
-                  onCamera: () => _pickPhoto(before: false, source: ImageSource.camera),
-                  onGallery: () => _pickPhoto(before: false, source: ImageSource.gallery),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: t.status == TicketStatus.completed ? null : _complete,
-                    icon: const Icon(Icons.check_circle_outline),
-                    label: const Text('Submit Report & Complete'),
-                  ),
-                ),
-              ],
-            ),
+                );
+              } else {
+                return _buildReportForm();
+              }
+            },
           ),
         ],
       ),
