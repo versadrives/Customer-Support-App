@@ -37,11 +37,6 @@
 
         <div style="grid-column:1/4;font-weight:600;margin-top:8px;margin-bottom:4px;border-bottom:1px solid var(--border);padding-bottom:6px;">Ticket Details</div>
         <div>
-          <label>Ticket ID</label>
-          {{ form.ticket_id }}
-          {% if form.ticket_id.errors %}<div class="field-help" style="color:#b42318;">{{ form.ticket_id.errors|join:", " }}</div>{% endif %}
-        </div>
-        <div>
           <label>Location</label>
           {{ form.location }}
           {% if form.location.errors %}<div class="field-help" style="color:#b42318;">{{ form.location.errors|join:", " }}</div>{% endif %}

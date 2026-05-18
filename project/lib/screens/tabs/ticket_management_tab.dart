@@ -169,7 +169,7 @@ class TicketManagementTabState extends State<TicketManagementTab> {
             Expanded(
               child: TextField(
                 controller: _search,
-                decoration: const InputDecoration(prefixIcon: Icon(Icons.search), labelText: 'Search tickets'),
+                decoration: const InputDecoration(prefixIcon: Icon(Icons.search), labelText: 'Search tickets, customers, or issues'),
                 onChanged: (_) => setState(() {}),
               ),
             ),

@@ -76,13 +76,6 @@
             {% endif %}
           </div>
           <div>
-            <label>Custom Challan Number</label>
-            {{ form.custom_challan_number }}
-            {% if form.custom_challan_number.errors %}
-              <div class="field-help" style="color:#b42318;">{{ form.custom_challan_number.errors|join:", " }}</div>
-            {% endif %}
-          </div>
-          <div>
             <label>Client Ref Number</label>
             {{ form.client_ref_number }}
             {% if form.client_ref_number.errors %}

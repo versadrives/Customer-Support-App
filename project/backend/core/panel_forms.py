@@ -38,7 +38,6 @@ class PanelTicketForm(forms.ModelForm):
     class Meta:
         model = Ticket
         fields = (
-            "ticket_id",
             "location",
             "service_type",
             "model",
@@ -123,7 +122,6 @@ class PanelTicketForm(forms.ModelForm):
         self.instance.issue_notes = _capfirst(self.cleaned_data.get("issue_notes", ""))
         self.instance.model = self.cleaned_data.get("resolved_model", "")
         self.instance.serial_number = _capfirst(self.cleaned_data.get("serial_number", ""))
-        self.instance.ticket_id = _capfirst(self.cleaned_data.get("ticket_id", ""))
         self.instance.purchase_date = self.cleaned_data.get("purchase_date")
         self.instance.new_fan_complaint = self.cleaned_data.get("new_fan_complaint") == "yes"
         self.instance.repeated_complaint_count = None if self.instance.new_fan_complaint else self.cleaned_data.get("repeated_complaint_count")
@@ -184,7 +182,6 @@ class PanelReplacementForm(forms.ModelForm):
         fields = (
             "ref_date",
             "client_ref_date",
-            "custom_challan_number",
             "client_ref_number",
             "contact_name",
             "contact_phone",

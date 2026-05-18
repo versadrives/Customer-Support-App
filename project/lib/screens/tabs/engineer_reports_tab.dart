@@ -18,6 +18,7 @@ class _EngineerReportsTabState extends State<EngineerReportsTab> {
   late Future<List<ReportData>> _future;
   DateTime _selectedDate = DateTime.now();
   List<ReportData> _myReports = [];
+  final _searchController = TextEditingController();
 
   String _fmt(DateTime? value) {
     if (value == null) return '-';
@@ -34,6 +35,12 @@ class _EngineerReportsTabState extends State<EngineerReportsTab> {
   void initState() {
     super.initState();
     _future = ApiClient.fetchReports(date: _fmtDate(_selectedDate));
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _refresh() async {
@@ -131,6 +138,15 @@ class _EngineerReportsTabState extends State<EngineerReportsTab> {
         _myReports = snapshot.data ?? [];
         final myReports = _myReports;
 
+        // Filter by search query
+        final query = _searchController.text.trim().toLowerCase();
+        final filteredReports = myReports.where((r) {
+          return query.isEmpty ||
+              r.ticketId.toLowerCase().contains(query) ||
+              r.serialNumber.toLowerCase().contains(query) ||
+              r.problemIdentified.toLowerCase().contains(query);
+        }).toList();
+
         return RefreshIndicator(
           onRefresh: _refresh,
           child: ListView(
@@ -157,47 +173,56 @@ class _EngineerReportsTabState extends State<EngineerReportsTab> {
                 ],
               ),
               const SizedBox(height: 8),
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 18, offset: const Offset(0, 10))],
-                ),
-                padding: const EdgeInsets.all(10),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: DataTable(
-                    columns: const [
-                      DataColumn(label: Text('S.No')),
-                      DataColumn(label: Text('Log Date')),
-                      DataColumn(label: Text('Service Provider Code')),
-                      DataColumn(label: Text('Ticket No')),
-                      DataColumn(label: Text('Attended By')),
-                      DataColumn(label: Text('Serial No')),
-                      DataColumn(label: Text('Problem Identified')),
-                      DataColumn(label: Text('Action Taken')),
-                      DataColumn(label: Text('PCB Board')),
-                      DataColumn(label: Text('Comments')),
-                      DataColumn(label: Text('Charges')),
-                      DataColumn(label: Text('KM Driven')),
-                      DataColumn(label: Text('Customer Polite')),
-                      DataColumn(label: Text('Difficult To Attend')),
-                    ],
-                    rows: [
-                      for (var i = 0; i < myReports.length; i++)
-                        DataRow(
-                          cells: [
-                            DataCell(Text('${i + 1}')),
-                            DataCell(Text(_fmt(myReports[i].createdAt))),
-                            DataCell(Text(myReports[i].serviceProviderCode)),
-                            DataCell(Text(myReports[i].ticketId)),
-                            DataCell(Text(myReports[i].engineerName)),
-                            DataCell(Text(myReports[i].serialNumber)),
-                            DataCell(Text(myReports[i].problemIdentified)),
-                            DataCell(Text(myReports[i].actionTaken)),
-                            DataCell(Text(myReports[i].pcbBoardNumber)),
-                            DataCell(Text(myReports[i].comments)),
+              TextField(
+                controller: _searchController,
+                decoration: const InputDecoration(prefixIcon: Icon(Icons.search), labelText: 'Search by issue, ticket, or serial'),
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 8),
+              if (filteredReports.isEmpty)
+                const Center(child: Text('No reports match your search.'))
+              else
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 18, offset: const Offset(0, 10))],
+                  ),
+                  padding: const EdgeInsets.all(10),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: DataTable(
+                      columns: const [
+                        DataColumn(label: Text('S.No')),
+                        DataColumn(label: Text('Log Date')),
+                        DataColumn(label: Text('Service Provider Code')),
+                        DataColumn(label: Text('Ticket No')),
+                        DataColumn(label: Text('Attended By')),
+                        DataColumn(label: Text('Serial No')),
+                        DataColumn(label: Text('Problem Identified')),
+                        DataColumn(label: Text('Action Taken')),
+                        DataColumn(label: Text('PCB Board')),
+                        DataColumn(label: Text('Comments')),
+                        DataColumn(label: Text('Charges')),
+                        DataColumn(label: Text('KM Driven')),
+                        DataColumn(label: Text('Customer Polite')),
+                        DataColumn(label: Text('Difficult To Attend')),
+                      ],
+                      rows: [
+                        for (var i = 0; i < filteredReports.length; i++)
+                          DataRow(
+                            cells: [
+                              DataCell(Text('${i + 1}')),
+                              DataCell(Text(_fmt(filteredReports[i].createdAt))),
+                              DataCell(Text(filteredReports[i].serviceProviderCode)),
+                              DataCell(Text(filteredReports[i].ticketId)),
+                              DataCell(Text(filteredReports[i].engineerName)),
+                              DataCell(Text(filteredReports[i].serialNumber)),
+                              DataCell(Text(filteredReports[i].problemIdentified)),
+                              DataCell(Text(filteredReports[i].actionTaken)),
+                              DataCell(Text(filteredReports[i].pcbBoardNumber)),
+                              DataCell(Text(filteredReports[i].comments)),
                             DataCell(Text(myReports[i].chargesCollected)),
                             DataCell(Text('${myReports[i].kmsDriven}')),
                             DataCell(Text(myReports[i].isCustomerPolite ? 'Yes' : 'No')),

@@ -129,7 +129,6 @@ class ApiClient {
     int? repeatedComplaintCount,
   }) async {
     final body = <String, dynamic>{
-      'ticket_id': _generateTicketId(),
       'customer_name': customerName,
       'customer_phone': customerPhone,
       'customer_address': customerAddress,
@@ -343,11 +342,6 @@ class ApiClient {
       throw Exception('Failed to update customer (${res.statusCode})');
     }
     return Customer.fromApi(jsonDecode(res.body) as Map<String, dynamic>);
-  }
-
-  static String _generateTicketId() {
-    final now = DateTime.now();
-    return 'TKT-${now.millisecondsSinceEpoch}';
   }
 }
 

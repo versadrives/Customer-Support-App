@@ -15,6 +15,7 @@ class AdminReportsTab extends StatefulWidget {
 
 class _AdminReportsTabState extends State<AdminReportsTab> {
   late Future<List<ReportData>> _future;
+  final _searchController = TextEditingController();
 
   String _fmt(DateTime? value) {
     if (value == null) return '-';
@@ -25,6 +26,12 @@ class _AdminReportsTabState extends State<AdminReportsTab> {
   void initState() {
     super.initState();
     _future = ApiClient.fetchReports();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _refresh() async {
@@ -54,8 +61,18 @@ class _AdminReportsTabState extends State<AdminReportsTab> {
         if (snapshot.hasError) {
           return Center(child: Text('Failed to load reports. ${snapshot.error}'));
         }
-        final reports = snapshot.data ?? [];
-        if (reports.isEmpty) return const Center(child: Text('No reports submitted yet.'));
+        final allReports = snapshot.data ?? [];
+        if (allReports.isEmpty) return const Center(child: Text('No reports submitted yet.'));
+
+        // Filter by search query
+        final query = _searchController.text.trim().toLowerCase();
+        final filteredReports = allReports.where((r) {
+          return query.isEmpty ||
+              r.ticketId.toLowerCase().contains(query) ||
+              r.engineerName.toLowerCase().contains(query) ||
+              r.serialNumber.toLowerCase().contains(query) ||
+              r.problemIdentified.toLowerCase().contains(query);
+        }).toList();
 
         return ListView(
           padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
@@ -68,39 +85,48 @@ class _AdminReportsTabState extends State<AdminReportsTab> {
               ],
             ),
             const SizedBox(height: 8),
-            ...reports.map(
-              (r) => Panel(
-                title: 'Report ${r.ticketId}',
-                icon: Icons.task,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Engineer: ${r.engineerName}'),
-                    const SizedBox(height: 4),
-                    Text('Log Date: ${_fmt(r.createdAt)}'),
-                    const SizedBox(height: 4),
-                    Text('Ticket Created: ${_fmt(r.ticketCreatedAt)}'),
-                    const SizedBox(height: 4),
-                    Text('Ticket Started: ${_fmt(r.ticketStartedAt)}'),
-                    const SizedBox(height: 4),
-                    Text('Ticket Completed: ${_fmt(r.ticketCompletedAt)}'),
-                    const SizedBox(height: 4),
-                    Text('Service Provider Code: ${r.serviceProviderCode}'),
-                    const SizedBox(height: 4),
-                    Text('Serial Number: ${r.serialNumber}'),
-                    const SizedBox(height: 4),
-                    Text('Problem Identified: ${r.problemIdentified}'),
-                    const SizedBox(height: 4),
-                    Text('Action Taken: ${r.actionTaken}'),
-                    const SizedBox(height: 4),
-                    Text('PCB Board Number: ${r.pcbBoardNumber}'),
-                    const SizedBox(height: 4),
-                    Text('Comments: ${r.comments}'),
-                    const SizedBox(height: 4),
-                    Text('Charges Collected: ${r.chargesCollected}'),
-                    const SizedBox(height: 4),
-                    Text('KM\'s Driven: ${r.kmsDriven}'),
-                    const SizedBox(height: 4),
+            TextField(
+              controller: _searchController,
+              decoration: const InputDecoration(prefixIcon: Icon(Icons.search), labelText: 'Search by issue, ticket, engineer, or serial'),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 12),
+            if (filteredReports.isEmpty)
+              const Center(child: Text('No reports match your search.'))
+            else
+              ...filteredReports.map(
+                (r) => Panel(
+                  title: 'Report ${r.ticketId}',
+                  icon: Icons.task,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Engineer: ${r.engineerName}'),
+                      const SizedBox(height: 4),
+                      Text('Log Date: ${_fmt(r.createdAt)}'),
+                      const SizedBox(height: 4),
+                      Text('Ticket Created: ${_fmt(r.ticketCreatedAt)}'),
+                      const SizedBox(height: 4),
+                      Text('Ticket Started: ${_fmt(r.ticketStartedAt)}'),
+                      const SizedBox(height: 4),
+                      Text('Ticket Completed: ${_fmt(r.ticketCompletedAt)}'),
+                      const SizedBox(height: 4),
+                      Text('Service Provider Code: ${r.serviceProviderCode}'),
+                      const SizedBox(height: 4),
+                      Text('Serial Number: ${r.serialNumber}'),
+                      const SizedBox(height: 4),
+                      Text('Problem Identified: ${r.problemIdentified}'),
+                      const SizedBox(height: 4),
+                      Text('Action Taken: ${r.actionTaken}'),
+                      const SizedBox(height: 4),
+                      Text('PCB Board Number: ${r.pcbBoardNumber}'),
+                      const SizedBox(height: 4),
+                      Text('Comments: ${r.comments}'),
+                      const SizedBox(height: 4),
+                      Text('Charges Collected: ${r.chargesCollected}'),
+                      const SizedBox(height: 4),
+                      Text('KM\'s Driven: ${r.kmsDriven}'),
+                      const SizedBox(height: 4),
                     Text('Customer Polite: ${r.isCustomerPolite ? 'Yes' : 'No'}'),
                     const SizedBox(height: 4),
                     Text('Difficult to Attend: ${r.difficultToAttend ? 'Yes' : 'No'}'),

@@ -1,5 +1,7 @@
 from django.conf import settings
 from django.db import models
+from django.db.models.signals import pre_save
+from django.dispatch import receiver
 
 
 class AdminProfile(models.Model):
@@ -76,7 +78,7 @@ class Item(models.Model):
 
 
 class Ticket(models.Model):
-    ticket_id = models.CharField(max_length=30, unique=True)
+    ticket_id = models.CharField(max_length=30, unique=True, blank=True)
     customer = models.ForeignKey(Customer, on_delete=models.PROTECT, related_name='tickets')
     location = models.CharField(max_length=120)
     issue = models.TextField()
@@ -115,7 +117,7 @@ class Replacement(models.Model):
     ref_date = models.DateField(null=True, blank=True)
     client_ref_date = models.DateField(null=True, blank=True)
     ref_number = models.CharField(max_length=80, blank=True)
-    custom_challan_number = models.CharField(max_length=80, blank=True)
+    custom_challan_number = models.CharField(max_length=80, blank=True, editable=False)
     client_ref_number = models.CharField(max_length=80, blank=True)
     organization_name = models.CharField(max_length=120, blank=True)
     contact_name = models.CharField(max_length=120, blank=True)
@@ -195,3 +197,41 @@ class Report(models.Model):
 
     def __str__(self) -> str:
         return f'Report {self.ticket.ticket_id}'
+
+
+@receiver(pre_save, sender=Ticket)
+def auto_generate_ticket_id(sender, instance, **kwargs):
+    """Auto-generate ticket_id if not provided."""
+    if not instance.ticket_id or not instance.ticket_id.strip():
+        try:
+            last_ticket = Ticket.objects.exclude(ticket_id='').order_by('-created_at').first()
+            if last_ticket and last_ticket.ticket_id and last_ticket.ticket_id.isdigit():
+                last_num = int(last_ticket.ticket_id)
+            else:
+                last_num = 0
+        except (ValueError, Ticket.DoesNotExist):
+            last_num = 0
+        
+        next_num = last_num + 1
+        instance.ticket_id = str(next_num).zfill(4)
+
+
+@receiver(pre_save, sender=Replacement)
+def auto_generate_challan_number(sender, instance, **kwargs):
+    """Auto-generate custom_challan_number if not provided."""
+    if not instance.custom_challan_number or not instance.custom_challan_number.strip():
+        try:
+            last_replacement = Replacement.objects.exclude(custom_challan_number='').order_by('-created_at').first()
+            if last_replacement and last_replacement.custom_challan_number:
+                num_part = last_replacement.custom_challan_number.replace('CH', '')
+                if num_part.isdigit():
+                    last_num = int(num_part)
+                else:
+                    last_num = 0
+            else:
+                last_num = 0
+        except (ValueError, Replacement.DoesNotExist):
+            last_num = 0
+        
+        next_num = last_num + 1
+        instance.custom_challan_number = f'CH{str(next_num).zfill(4)}'

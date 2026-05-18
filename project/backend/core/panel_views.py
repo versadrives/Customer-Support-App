@@ -1,3 +1,15 @@
+def _escape_like_wildcards(value):
+    """Escape SQL wildcard characters (%) and underscore (_) for literal LIKE matching."""
+    if not value:
+        return value
+    # Escape % and _ by adding a backslash before them
+    # Note: Different databases use different escape characters, but PostgreSQL and MySQL
+    # both support \ as an escape character for LIKE when used with ESCAPE clause
+    # However, Django's ORM doesn't easily support specifying the escape clause
+    # So we'll use the standard SQL escape syntax by replacing the characters
+    return value.replace('%', '\\%').replace('_', '\\_')
+
+
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
@@ -9,6 +21,7 @@ from django.utils import timezone
 from datetime import timedelta
 import csv
 from types import SimpleNamespace
+import re
 
 from django.core.paginator import Paginator
 from django.db.models import Q
@@ -219,6 +232,10 @@ def panel_index(request):
 def panel_tickets(request):
     if not request.user.is_staff:
         return redirect("panel:panel_login")
+    # Calculate today's date and count of tickets for today (unfiltered)
+    today = timezone.localdate()
+    today_tickets_count = Ticket.objects.filter(created_at__date=today).count()
+
     tickets = Ticket.objects.select_related("customer", "created_by", "assigned_engineer", "assigned_engineer__user").all()
     service_type = request.GET.get("service_type", "").strip()
     status = request.GET.get("status", "").strip()
@@ -237,10 +254,14 @@ def panel_tickets(request):
     if customer_id:
         tickets = tickets.filter(customer_id=customer_id)
     if search:
+        # Escape special characters for literal search
+        escaped_search = _escape_like_wildcards(search)
         tickets = tickets.filter(
-            Q(ticket_id__icontains=search)
-            | Q(customer__name__icontains=search)
-            | Q(customer__contact_phone__icontains=search)
+            Q(ticket_id__icontains=escaped_search)
+            | Q(customer__name__icontains=escaped_search)
+            | Q(customer__contact_phone__icontains=escaped_search)
+            | Q(issue__icontains=escaped_search)
+            | Q(issue_notes__icontains=escaped_search)
         )
     if date_from and not search:
         parsed = parse_date(date_from)
@@ -250,10 +271,29 @@ def panel_tickets(request):
         parsed = parse_date(date_to)
         if parsed:
             tickets = tickets.filter(created_at__date__lte=parsed)
+    # If no filters are applied, restrict to today's tickets
     if not any([service_type, status, engineer_id, customer_id, search, date_from, date_to]):
-        today = timezone.localdate()
         tickets = tickets.filter(created_at__date=today)
         date_from = date_to = today.isoformat()
+
+    # Calculate filtered count (after applying filters and today restriction if no filters)
+    filtered_count = tickets.count()
+
+    # Calculate statistics based on the filtered queryset
+    non_replacement = tickets.exclude(service_type=TicketServiceType.REPLACEMENT)
+    replacements = tickets.filter(service_type=TicketServiceType.REPLACEMENT)
+    stats = {
+        'total': tickets.count(),
+        'open': non_replacement.filter(status=TicketStatus.OPEN).count(),
+        'assigned': non_replacement.filter(status=TicketStatus.ASSIGNED).count(),
+        'in_progress': non_replacement.filter(status=TicketStatus.IN_PROGRESS).count(),
+        'completed': non_replacement.filter(status=TicketStatus.COMPLETED).count(),
+        'replacements': replacements.count(),
+        'engineers': EngineerProfile.objects.count(),
+        'customers': Customer.objects.count(),
+        'reports': Report.objects.count(),
+        'admins': AdminProfile.objects.count(),
+    }
 
     filters_applied = any([service_type, status, engineer_id, customer_id, search, date_from, date_to])
     tickets = tickets.order_by("-created_at")
@@ -288,6 +328,9 @@ def panel_tickets(request):
                 "date_from": date_from,
                 "date_to": date_to,
             },
+            "stats": stats,
+            "today_tickets_count": today_tickets_count,
+            "filtered_count": filtered_count,
         },
     )
 
@@ -462,10 +505,13 @@ def panel_replacements(request):
     if status:
         tickets = tickets.filter(replacement__status=status)
     if search:
+        escaped_search = _escape_like_wildcards(search)
         tickets = tickets.filter(
-            Q(ticket_id__icontains=search)
-            | Q(customer__name__icontains=search)
-            | Q(customer__contact_phone__icontains=search)
+            Q(ticket_id__icontains=escaped_search)
+            | Q(customer__name__icontains=escaped_search)
+            | Q(customer__contact_phone__icontains=escaped_search)
+            | Q(issue__icontains=escaped_search)
+            | Q(issue_notes__icontains=escaped_search)
         )
     if date_from and not search:
         parsed = parse_date(date_from)
@@ -573,10 +619,14 @@ def panel_customers(request):
 def panel_reports(request):
     if not request.user.is_staff:
         return redirect("panel:panel_login")
+    # Calculate today's date and count of reports for today (unfiltered)
+    today = timezone.localdate()
+    today_reports_count = Report.objects.filter(created_at__date=today).count()
+
     service_type = request.GET.get("service_type", "").strip()
     engineer_id = request.GET.get("engineer", "").strip()
     status = request.GET.get("status", "").strip()
-    ticket_search = request.GET.get("ticket", "").strip()
+    search = request.GET.get("search", "").strip()
     date_from = request.GET.get("date_from", "").strip()
     date_to = request.GET.get("date_to", "").strip()
     service_reports = Report.objects.select_related("ticket", "engineer", "engineer__user", "ticket__customer").all()
@@ -595,20 +645,35 @@ def panel_reports(request):
     if status:
         service_reports = service_reports.filter(ticket__status=status)
         replacement_reports = replacement_reports.filter(ticket__status=status)
-    if ticket_search:
-        service_reports = service_reports.filter(ticket__ticket_id__icontains=ticket_search)
-        replacement_reports = replacement_reports.filter(ticket__ticket_id__icontains=ticket_search)
-    if date_from:
+    if search:
+        # Escape special characters for literal search
+        escaped_search = _escape_like_wildcards(search)
+        service_reports = service_reports.filter(
+            Q(ticket__ticket_id__icontains=escaped_search)
+            | Q(ticket__customer__name__icontains=escaped_search)
+            | Q(ticket__customer__contact_phone__icontains=escaped_search)
+            | Q(ticket__issue__icontains=escaped_search)
+            | Q(ticket__issue_notes__icontains=escaped_search)
+        )
+        replacement_reports = replacement_reports.filter(
+            Q(ticket__ticket_id__icontains=escaped_search)
+            | Q(ticket__customer__name__icontains=escaped_search)
+            | Q(ticket__customer__contact_phone__icontains=escaped_search)
+            | Q(ticket__issue__icontains=escaped_search)
+            | Q(ticket__issue_notes__icontains=escaped_search)
+        )
+    if date_from and not search:
         parsed = parse_date(date_from)
         if parsed:
             service_reports = service_reports.filter(created_at__date__gte=parsed)
             replacement_reports = replacement_reports.filter(updated_at__date__gte=parsed)
-    if date_to:
+    if date_to and not search:
         parsed = parse_date(date_to)
         if parsed:
             service_reports = service_reports.filter(created_at__date__lte=parsed)
             replacement_reports = replacement_reports.filter(updated_at__date__lte=parsed)
-    if not any([service_type, engineer_id, status, ticket_search, date_from, date_to]):
+    # If no filters are applied, restrict to today's reports
+    if not any([service_type, engineer_id, status, search, date_from, date_to]):
         today = timezone.localdate()
         service_reports = service_reports.filter(created_at__date=today)
         replacement_reports = replacement_reports.filter(updated_at__date=today)
@@ -616,7 +681,7 @@ def panel_reports(request):
 
     report_rows = _build_report_rows(service_reports, replacement_reports)
 
-    filters_applied = any([service_type, engineer_id, status, ticket_search, date_from, date_to])
+    filters_applied = any([service_type, engineer_id, status, search, date_from, date_to])
     if request.GET.get("export") == "csv" and filters_applied:
         response = HttpResponse(content_type="text/csv")
         response["Content-Disposition"] = 'attachment; filename="reports.csv"'
@@ -665,7 +730,7 @@ def panel_reports(request):
                 "service_type": service_type,
                 "engineer": engineer_id,
                 "status": status,
-                "ticket": ticket_search,
+                "search": search,
                 "date_from": date_from,
                 "date_to": date_to,
             },

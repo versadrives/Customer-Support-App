@@ -4,6 +4,9 @@
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;">
       <strong>Tickets</strong>
+      <div style="font-size:0.9em;color:#666;min-width:200px;">
+        Today: {{ today_tickets_count }} | Filtered: {{ filtered_count }}
+      </div>
       <a class="btn primary" href="{% url 'panel:panel_ticket_create' %}">Add Ticket</a>
     </div>
     {% if PANEL_SHOW_FILTERS %}
@@ -48,8 +51,8 @@
         </div>
         <div class="inline">
           <div>
-            <label>Ticket Search</label>
-            <input type="text" name="search" placeholder="Ticket ID / Name / Phone" value="{{ filters.search }}" />
+            <label>Search</label>
+            <input type="text" name="search" placeholder="Ticket ID / Name / Phone / Issue" value="{{ filters.search }}" />
           </div>
         </div>
         <div class="actions">
