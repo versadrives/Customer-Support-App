@@ -6,17 +6,43 @@
       <strong>Report {{ report.ticket.ticket_id }}</strong>
       <a class="btn" href="/panel/reports/">Back</a>
     </div>
-    <div style="margin-top:12px;">
+    <div style="margin-top:14px;">
+      <strong>Ticket Details</strong>
+      <div style="margin-top:8px;">
+        <table class="table">
+          <tbody>
+            <tr><th>Ticket No</th><td>{{ report.ticket.ticket_id }}</td></tr>
+            <tr><th>Customer</th><td>{{ report.ticket.customer.name|default:"-" }}</td></tr>
+            <tr><th>Phone</th><td>{{ report.ticket.customer.contact_phone|default:"-" }}</td></tr>
+            <tr><th>Address</th><td>{{ report.ticket.customer.address|default:"-" }}</td></tr>
+            <tr><th>Service Type</th><td>{{ report.ticket.get_service_type_display }}</td></tr>
+            <tr><th>Status</th><td>{{ report.ticket.get_status_display }}</td></tr>
+            <tr><th>Assigned Engineer</th><td>{% if report.ticket.assigned_engineer %}{{ report.ticket.assigned_engineer.display_name }}{% else %}-{% endif %}</td></tr>
+            <tr><th>Location</th><td>{{ report.ticket.location|default:"-" }}</td></tr>
+            <tr><th>Product</th><td>{{ report.ticket.model|default:"-" }}</td></tr>
+            <tr><th>Serial Number</th><td>{{ report.ticket.serial_number|default:"-" }}</td></tr>
+            <tr><th>MFG Date</th><td>{{ report.ticket.mfg_date|date:"Y-m-d"|default:"-" }}</td></tr>
+            <tr><th>Purchase Date</th><td>{{ report.ticket.purchase_date|date:"Y-m-d"|default:"-" }}</td></tr>
+            <tr><th>Ticket Created</th><td>{{ report.ticket.created_at|date:"Y-m-d H:i" }}</td></tr>
+            <tr><th>Assigned At</th><td>{{ report.ticket.assigned_at|date:"Y-m-d H:i"|default:"-" }}</td></tr>
+            <tr><th>Started At</th><td>{{ report.ticket.started_at|date:"Y-m-d H:i"|default:"-" }}</td></tr>
+            <tr><th>Completed At</th><td>{{ report.ticket.completed_at|date:"Y-m-d H:i"|default:"-" }}</td></tr>
+            <tr><th>Issue</th><td>{{ report.ticket.issue|capfirst }}</td></tr>
+            <tr><th>Issue Notes</th><td>{{ report.ticket.issue_notes|default:"-"|capfirst }}</td></tr>
+            <tr><th>New Fan Complaint</th><td>{% if report.ticket.new_fan_complaint %}Yes{% else %}No{% endif %}</td></tr>
+            <tr><th>Repeated Complaint</th><td>{{ report.ticket.repeated_complaint_count|default:"-" }}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div style="margin-top:14px;">
+      <strong>Report Details</strong>
+      <div style="margin-top:8px;">
       <table class="table">
         <tbody>
           <tr><th>Log Date</th><td>{{ report.created_at|date:"Y-m-d H:i" }}</td></tr>
-          <tr><th>Ticket No</th><td>{{ report.ticket.ticket_id }}</td></tr>
           <tr><th>Attended By</th><td>{{ report.engineer.display_name }}</td></tr>
-          <tr><th>Issue</th><td>{{ report.ticket.issue|capfirst }}</td></tr>
-          <tr><th>Issue Notes</th><td>{{ report.ticket.issue_notes|default:"-"|capfirst }}</td></tr>
-          <tr><th>Purchase Date</th><td>{{ report.ticket.purchase_date|date:"Y-m-d"|default:"-" }}</td></tr>
-          <tr><th>New Fan Complaint</th><td>{% if report.ticket.new_fan_complaint %}Yes{% else %}No{% endif %}</td></tr>
-          <tr><th>Repeated Complaint</th><td>{{ report.ticket.repeated_complaint_count|default:"-" }}</td></tr>
           <tr><th>Service Provider Code</th><td>{{ report.service_provider_code }}</td></tr>
           <tr><th>Serial Number</th><td>{{ report.serial_number }}</td></tr>
           <tr><th>Problem Identified</th><td>{{ report.problem_identified|capfirst }}</td></tr>
@@ -53,6 +79,7 @@
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
   </div>
 {% endblock %}

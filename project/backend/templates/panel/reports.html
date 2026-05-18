@@ -6,8 +6,17 @@
       <strong>Reports</strong>
       <a class="btn primary" href="/panel/reports/">Refresh</a>
     </div>
+    {% if active_saved_view %}
+      <div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 12px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fbff;">
+        <div class="muted" style="font-size:13px;">Active list: {{ active_saved_view.name }}</div>
+        <a class="btn" href="{% url 'panel:panel_lists' %}?page_type=REPORTS&view={{ active_saved_view.id }}">Manage Lists</a>
+      </div>
+    {% endif %}
     {% if PANEL_SHOW_FILTERS %}
       <form class="filters" method="get">
+        {% if selected_view_id %}
+          <input type="hidden" name="view" value="{{ selected_view_id }}" />
+        {% endif %}
         <div class="inline">
           <div>
             <label>Onsite / Replacement</label>
@@ -53,6 +62,7 @@
         <div class="actions">
           <button class="btn primary" type="submit">Apply Filters</button>
           <button class="btn" type="submit" name="export" value="csv" id="export-csv" disabled>Export Excel (CSV)</button>
+          <a class="btn" href="{% url 'panel:panel_lists' %}?page_type=REPORTS{% if active_saved_view %}&view={{ active_saved_view.id }}{% endif %}">Lists</a>
           <a class="btn" href="/panel/reports/">Clear</a>
         </div>
       </form>
@@ -61,28 +71,36 @@
       <table class="table">
         <thead>
           <tr>
-            <th>Ticket</th>
-            <th>Customer</th>
-            <th>Type</th>
-            <th>Engineer</th>
-            <th>Charges</th>
-            <th>Log Date</th>
+            {% if "ticket_id" in visible_columns %}<th>Ticket</th>{% endif %}
+            {% if "customer" in visible_columns %}<th>Customer</th>{% endif %}
+            {% if "type" in visible_columns %}<th>Type</th>{% endif %}
+            {% if "status" in visible_columns %}<th>Status</th>{% endif %}
+            {% if "engineer" in visible_columns %}<th>Engineer</th>{% endif %}
+            {% if "location" in visible_columns %}<th>Location</th>{% endif %}
+            {% if "provider_code" in visible_columns %}<th>Provider Code</th>{% endif %}
+            {% if "serial_number" in visible_columns %}<th>Serial Number</th>{% endif %}
+            {% if "charges" in visible_columns %}<th>Charges</th>{% endif %}
+            {% if "log_date" in visible_columns %}<th>Log Date</th>{% endif %}
             <th></th>
           </tr>
         </thead>
         <tbody>
           {% for r in reports %}
             <tr>
-              <td>{{ r.ticket.ticket_id }}</td>
-              <td>{{ r.ticket.customer.name|default:"-" }}</td>
-              <td>{{ r.ticket.get_service_type_display }}</td>
-              <td>{% if r.engineer %}{{ r.engineer.display_name }}{% else %}-{% endif %}</td>
-              <td>{% if r.charges_collected != "" %}{{ r.charges_collected }}{% else %}-{% endif %}</td>
-              <td>{{ r.created_at|date:"Y-m-d H:i" }}</td>
+              {% if "ticket_id" in visible_columns %}<td>{{ r.ticket.ticket_id }}</td>{% endif %}
+              {% if "customer" in visible_columns %}<td>{{ r.ticket.customer.name|default:"-" }}</td>{% endif %}
+              {% if "type" in visible_columns %}<td>{{ r.ticket.get_service_type_display }}</td>{% endif %}
+              {% if "status" in visible_columns %}<td>{{ r.status }}</td>{% endif %}
+              {% if "engineer" in visible_columns %}<td>{% if r.engineer %}{{ r.engineer.display_name }}{% else %}-{% endif %}</td>{% endif %}
+              {% if "location" in visible_columns %}<td>{{ r.ticket.location|default:"-" }}</td>{% endif %}
+              {% if "provider_code" in visible_columns %}<td>{{ r.service_provider_code|default:"-" }}</td>{% endif %}
+              {% if "serial_number" in visible_columns %}<td>{{ r.ticket.serial_number|default:"-" }}</td>{% endif %}
+              {% if "charges" in visible_columns %}<td>{% if r.charges_collected != "" %}{{ r.charges_collected }}{% else %}-{% endif %}</td>{% endif %}
+              {% if "log_date" in visible_columns %}<td>{{ r.created_at|date:"Y-m-d H:i" }}</td>{% endif %}
               <td><a class="btn" href="{{ r.detail_url }}">View</a></td>
             </tr>
           {% empty %}
-            <tr><td colspan="7" class="muted">No reports found.</td></tr>
+            <tr><td colspan="{{ empty_colspan }}" class="muted">No reports found.</td></tr>
           {% endfor %}
         </tbody>
       </table>

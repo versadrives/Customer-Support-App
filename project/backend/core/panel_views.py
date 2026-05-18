@@ -18,16 +18,97 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.conf import settings
 from django.utils.dateparse import parse_date
 from django.utils import timezone
+from django.urls import reverse
 from datetime import timedelta
 import csv
 from types import SimpleNamespace
 import re
+from urllib.parse import urlencode
 
 from django.core.paginator import Paginator
 from django.db.models import Q
-from .models import AdminProfile, Customer, EngineerProfile, IssueOption, Item, Replacement, ReplacementStatus, Report, Ticket, TicketServiceType, TicketStatus
+from .models import AdminProfile, Customer, EngineerProfile, IssueOption, Item, Replacement, ReplacementStatus, Report, SavedView, SavedViewPageType, Ticket, TicketServiceType, TicketStatus
 from .panel_forms import PanelEngineerForm, PanelLoginForm, PanelReplacementForm, PanelTicketForm, PanelTicketStatusForm
 from .replacement_pdf import build_replacement_invoice_response
+
+
+TICKET_COLUMN_CHOICES = (
+    ("ticket_id", "Ticket"),
+    ("customer", "Customer"),
+    ("service_type", "Type"),
+    ("complaint", "Complaint"),
+    ("phone", "Phone"),
+    ("location", "Location"),
+    ("model", "Product"),
+    ("purchase_date", "Purchase Date"),
+    ("status", "Status"),
+    ("assigned", "Assigned"),
+    ("created", "Created"),
+)
+DEFAULT_TICKET_COLUMNS = [
+    "ticket_id",
+    "customer",
+    "service_type",
+    "complaint",
+    "phone",
+    "status",
+    "assigned",
+    "created",
+]
+TICKET_FILTER_KEYS = ("service_type", "status", "engineer", "search", "date_from", "date_to")
+REPLACEMENT_COLUMN_CHOICES = (
+    ("ticket_id", "Ticket"),
+    ("customer", "Customer"),
+    ("phone", "Phone"),
+    ("purchase_date", "Purchase Date"),
+    ("complaint", "Complaint"),
+    ("item", "Item"),
+    ("serial_number", "Serial Number"),
+    ("challan", "Challan"),
+    ("status", "Status"),
+    ("created", "Created"),
+)
+DEFAULT_REPLACEMENT_COLUMNS = [column_id for column_id, _ in REPLACEMENT_COLUMN_CHOICES]
+REPLACEMENT_FILTER_KEYS = ("status", "search", "date_from", "date_to")
+REPORT_COLUMN_CHOICES = (
+    ("ticket_id", "Ticket"),
+    ("customer", "Customer"),
+    ("type", "Type"),
+    ("status", "Status"),
+    ("engineer", "Engineer"),
+    ("location", "Location"),
+    ("provider_code", "Provider Code"),
+    ("serial_number", "Serial Number"),
+    ("charges", "Charges"),
+    ("log_date", "Log Date"),
+)
+DEFAULT_REPORT_COLUMNS = [column_id for column_id, _ in REPORT_COLUMN_CHOICES]
+REPORT_FILTER_KEYS = ("service_type", "status", "engineer", "search", "date_from", "date_to")
+LIST_PAGE_CONFIG = {
+    SavedViewPageType.TICKETS: {
+        "label": "Tickets",
+        "url_name": "panel:panel_tickets",
+        "filter_keys": TICKET_FILTER_KEYS,
+        "column_choices": TICKET_COLUMN_CHOICES,
+        "default_columns": DEFAULT_TICKET_COLUMNS,
+    },
+    SavedViewPageType.REPLACEMENTS: {
+        "label": "Replacements",
+        "url_name": "panel:panel_replacements",
+        "filter_keys": REPLACEMENT_FILTER_KEYS,
+        "column_choices": REPLACEMENT_COLUMN_CHOICES,
+        "default_columns": DEFAULT_REPLACEMENT_COLUMNS,
+    },
+    SavedViewPageType.REPORTS: {
+        "label": "Reports",
+        "url_name": "panel:panel_reports",
+        "filter_keys": REPORT_FILTER_KEYS,
+        "column_choices": REPORT_COLUMN_CHOICES,
+        "default_columns": DEFAULT_REPORT_COLUMNS,
+    },
+}
+TICKET_STATE_QUERY_KEYS = ("view", "service_type", "status", "engineer", "search", "date_from", "date_to", "page")
+TICKET_LAST_QUERY_SESSION_KEY = "panel_tickets_last_query"
 
 
 def _require_staff(user):
@@ -63,6 +144,52 @@ def _display_datetime(value):
 
 def _display_bool(value):
     return "Yes" if value else "No"
+
+
+def _normalize_columns(page_type, columns):
+    config = LIST_PAGE_CONFIG[page_type]
+    allowed = {column_id for column_id, _ in config["column_choices"]}
+    normalized = []
+    for column in columns:
+        if column in allowed and column not in normalized:
+            normalized.append(column)
+    return normalized or list(config["default_columns"])
+
+
+def _build_filters_from_source(page_type, source):
+    return {key: source.get(key, "").strip() for key in LIST_PAGE_CONFIG[page_type]["filter_keys"]}
+
+
+def _get_columns_from_source(page_type, source):
+    serialized = (source.get("selected_columns") or "").strip()
+    if serialized:
+        return _normalize_columns(page_type, [value.strip() for value in serialized.split(",") if value.strip()])
+    getter = getattr(source, "getlist", None)
+    if getter:
+        return _normalize_columns(page_type, getter("columns"))
+    raw_value = source.get("columns", [])
+    if isinstance(raw_value, (list, tuple)):
+        return _normalize_columns(page_type, raw_value)
+    return _normalize_columns(page_type, [raw_value] if raw_value else [])
+
+
+def _get_saved_views_for_page(user, page_type):
+    return SavedView.objects.filter(user=user, page_type=page_type).order_by("name")
+
+
+def _resolve_page_type(raw_page_type):
+    if raw_page_type in LIST_PAGE_CONFIG:
+        return raw_page_type
+    return SavedViewPageType.TICKETS
+
+
+def _build_lists_url(page_type, view_id="", mode=""):
+    params = {"page_type": page_type}
+    if view_id:
+        params["view"] = str(view_id)
+    if mode:
+        params["mode"] = mode
+    return f"{reverse('panel:panel_lists')}?{urlencode(params)}"
 
 
 def _build_report_rows(service_reports, replacements):
@@ -229,21 +356,175 @@ def panel_index(request):
 
 
 @login_required(login_url="/panel/login/")
+def panel_lists(request):
+    if not request.user.is_staff:
+        return redirect("panel:panel_login")
+
+    saved_view_error = ""
+    saved_view_success = ""
+    current_page_type = _resolve_page_type((request.GET.get("page_type") or request.POST.get("page_type") or "").strip())
+    selected_view_id = (request.GET.get("view") or "").strip()
+    editor_mode = (request.GET.get("mode") or request.POST.get("editor_mode") or "").strip()
+    all_saved_views = SavedView.objects.filter(user=request.user).order_by("page_type", "name")
+    saved_views = all_saved_views.filter(page_type=current_page_type)
+    active_saved_view = None
+    if selected_view_id.isdigit():
+        active_saved_view = all_saved_views.filter(id=int(selected_view_id)).first()
+        if active_saved_view:
+            current_page_type = active_saved_view.page_type
+            saved_views = all_saved_views.filter(page_type=current_page_type)
+
+    page_config = LIST_PAGE_CONFIG[current_page_type]
+    initial_filters = {key: "" for key in page_config["filter_keys"]}
+    visible_columns = list(page_config["default_columns"])
+    view_name = ""
+    is_default = False
+    editing_view_id = ""
+    if active_saved_view:
+        initial_filters.update(active_saved_view.filters or {})
+        visible_columns = _normalize_columns(current_page_type, active_saved_view.columns or [])
+        view_name = active_saved_view.name
+        is_default = active_saved_view.is_default
+        editing_view_id = str(active_saved_view.id)
+        if not editor_mode:
+            editor_mode = "edit"
+
+    if request.method == "POST":
+        action = (request.POST.get("action") or "").strip()
+        if action == "save_view":
+            if editor_mode not in ("new", "edit"):
+                editor_mode = "edit" if active_saved_view else "new"
+            view_name = (request.POST.get("view_name") or "").strip()
+            editing_view_id = (request.POST.get("editing_view_id") or "").strip()
+            current_page_type = _resolve_page_type((request.POST.get("page_type") or "").strip())
+            page_config = LIST_PAGE_CONFIG[current_page_type]
+            initial_filters = _build_filters_from_source(current_page_type, request.POST)
+            visible_columns = _get_columns_from_source(current_page_type, request.POST)
+            is_default = request.POST.get("is_default") == "1"
+            if not view_name:
+                saved_view_error = "Enter a name to save this list."
+            else:
+                saved_view = None
+                if editing_view_id.isdigit():
+                    saved_view = SavedView.objects.filter(
+                        id=int(editing_view_id),
+                        user=request.user,
+                    ).first()
+                if saved_view:
+                    saved_view.page_type = current_page_type
+                    saved_view.name = view_name
+                    saved_view.filters = dict(initial_filters)
+                    saved_view.columns = visible_columns
+                    saved_view.is_default = is_default
+                    saved_view.save()
+                else:
+                    saved_view, _ = SavedView.objects.update_or_create(
+                        user=request.user,
+                        page_type=current_page_type,
+                        name=view_name,
+                        defaults={
+                            "filters": dict(initial_filters),
+                            "columns": visible_columns,
+                            "is_default": is_default,
+                        },
+                    )
+                if is_default:
+                    SavedView.objects.filter(
+                        user=request.user,
+                        page_type=current_page_type,
+                    ).exclude(id=saved_view.id).update(is_default=False)
+                return redirect(_build_lists_url(current_page_type, saved_view.id, "edit"))
+        elif action == "delete_view":
+            delete_id = (request.POST.get("view_id") or "").strip()
+            if delete_id.isdigit():
+                target_view = all_saved_views.filter(id=int(delete_id)).first()
+                deleted = all_saved_views.filter(id=int(delete_id)).delete()
+                if deleted[0]:
+                    if target_view:
+                        current_page_type = target_view.page_type
+                    return redirect(_build_lists_url(current_page_type))
+        else:
+            editor_mode = "new"
+
+    editor_open = editor_mode in ("new", "edit")
+
+    engineers = EngineerProfile.objects.select_related("user").order_by("user__username")
+    return render(
+        request,
+        "panel/lists.html",
+        {
+            "page_title": "Lists",
+            "page_type_choices": SavedViewPageType.choices,
+            "current_page_type": current_page_type,
+            "current_page_label": page_config["label"],
+            "all_saved_views": all_saved_views,
+            "saved_views": saved_views,
+            "active_saved_view": active_saved_view,
+            "selected_view_id": selected_view_id,
+            "page_url_name": page_config["url_name"],
+            "column_choices": page_config["column_choices"],
+            "visible_columns": visible_columns,
+            "filters": initial_filters,
+            "engineers": engineers,
+            "saved_view_error": saved_view_error,
+            "saved_view_success": saved_view_success,
+            "view_name": view_name,
+            "is_default": is_default,
+            "editing_view_id": editing_view_id,
+            "editor_open": editor_open,
+            "editor_mode": editor_mode,
+        },
+    )
+
+
+@login_required(login_url="/panel/login/")
 def panel_tickets(request):
     if not request.user.is_staff:
         return redirect("panel:panel_login")
+    if request.GET.get("clear") == "1":
+        request.session.pop(TICKET_LAST_QUERY_SESSION_KEY, None)
+        return redirect("panel:panel_tickets")
+
+    has_ticket_state = any(key in request.GET for key in TICKET_STATE_QUERY_KEYS)
+    if not has_ticket_state:
+        last_query = request.session.get(TICKET_LAST_QUERY_SESSION_KEY, "")
+        if last_query:
+            return redirect(f"{reverse('panel:panel_tickets')}?{last_query}")
+
     # Calculate today's date and count of tickets for today (unfiltered)
     today = timezone.localdate()
     today_tickets_count = Ticket.objects.filter(created_at__date=today).count()
 
+    saved_views = _get_saved_views_for_page(request.user, SavedViewPageType.TICKETS)
+    selected_view_id = (request.GET.get("view") or "").strip()
+    active_saved_view = None
+    if selected_view_id.isdigit():
+        active_saved_view = saved_views.filter(id=int(selected_view_id)).first()
+    elif request.method != "POST" and not any(key in request.GET for key in ("service_type", "status", "engineer", "search", "date_from", "date_to", "columns", "page")):
+        active_saved_view = saved_views.filter(is_default=True).first()
+        if active_saved_view:
+            selected_view_id = str(active_saved_view.id)
+
+    initial_filters = {key: "" for key in TICKET_FILTER_KEYS}
+    visible_columns = list(DEFAULT_TICKET_COLUMNS)
+    if active_saved_view:
+        initial_filters.update(active_saved_view.filters or {})
+        visible_columns = _normalize_columns(SavedViewPageType.TICKETS, active_saved_view.columns or [])
+    else:
+        for key in TICKET_FILTER_KEYS:
+            if key in request.GET:
+                initial_filters[key] = request.GET.get(key, "").strip()
+        if "columns" in request.GET:
+            visible_columns = _normalize_columns(SavedViewPageType.TICKETS, request.GET.getlist("columns"))
+
     tickets = Ticket.objects.select_related("customer", "created_by", "assigned_engineer", "assigned_engineer__user").all()
-    service_type = request.GET.get("service_type", "").strip()
-    status = request.GET.get("status", "").strip()
-    engineer_id = request.GET.get("engineer", "").strip()
+    service_type = initial_filters["service_type"]
+    status = initial_filters["status"]
+    engineer_id = initial_filters["engineer"]
     customer_id = request.GET.get("customer", "").strip()
-    search = request.GET.get("search", "").strip()
-    date_from = request.GET.get("date_from", "").strip()
-    date_to = request.GET.get("date_to", "").strip()
+    search = initial_filters["search"]
+    date_from = initial_filters["date_from"]
+    date_to = initial_filters["date_to"]
 
     if service_type:
         tickets = tickets.filter(service_type=service_type)
@@ -307,6 +588,16 @@ def panel_tickets(request):
         page_query_params.pop("page", None)
         page_query = page_query_params.urlencode()
 
+    state_query = request.GET.copy()
+    if "clear" in state_query:
+        state_query.pop("clear", None)
+    if any(state_query.get(key, "").strip() for key in TICKET_STATE_QUERY_KEYS if key != "page"):
+        request.session[TICKET_LAST_QUERY_SESSION_KEY] = state_query.urlencode()
+    elif state_query.get("view", "").strip():
+        request.session[TICKET_LAST_QUERY_SESSION_KEY] = state_query.urlencode()
+    else:
+        request.session.pop(TICKET_LAST_QUERY_SESSION_KEY, None)
+
     engineers = EngineerProfile.objects.select_related("user").order_by("user__username")
     customers = Customer.objects.order_by("name")
     return render(
@@ -319,6 +610,12 @@ def panel_tickets(request):
             "customers": customers,
             "page_obj": page_obj,
             "page_query": page_query,
+            "saved_views": saved_views,
+            "active_saved_view": active_saved_view,
+            "selected_view_id": selected_view_id,
+            "ticket_column_choices": TICKET_COLUMN_CHOICES,
+            "visible_columns": visible_columns,
+            "empty_colspan": len(visible_columns) + 1,
             "filters": {
                 "service_type": service_type,
                 "status": status,
@@ -497,10 +794,32 @@ def panel_replacements(request):
         .filter(service_type=TicketServiceType.REPLACEMENT)
     )
 
-    status = request.GET.get("status", "").strip()
-    search = request.GET.get("search", "").strip()
-    date_from = request.GET.get("date_from", "").strip()
-    date_to = request.GET.get("date_to", "").strip()
+    saved_views = _get_saved_views_for_page(request.user, SavedViewPageType.REPLACEMENTS)
+    selected_view_id = (request.GET.get("view") or "").strip()
+    active_saved_view = None
+    if selected_view_id.isdigit():
+        active_saved_view = saved_views.filter(id=int(selected_view_id)).first()
+    elif not any(key in request.GET for key in ("status", "search", "date_from", "date_to", "columns", "page")):
+        active_saved_view = saved_views.filter(is_default=True).first()
+        if active_saved_view:
+            selected_view_id = str(active_saved_view.id)
+
+    initial_filters = {key: "" for key in REPLACEMENT_FILTER_KEYS}
+    visible_columns = list(DEFAULT_REPLACEMENT_COLUMNS)
+    if active_saved_view:
+        initial_filters.update(active_saved_view.filters or {})
+        visible_columns = _normalize_columns(SavedViewPageType.REPLACEMENTS, active_saved_view.columns or [])
+    else:
+        for key in REPLACEMENT_FILTER_KEYS:
+            if key in request.GET:
+                initial_filters[key] = request.GET.get(key, "").strip()
+        if "columns" in request.GET:
+            visible_columns = _normalize_columns(SavedViewPageType.REPLACEMENTS, request.GET.getlist("columns"))
+
+    status = initial_filters["status"]
+    search = initial_filters["search"]
+    date_from = initial_filters["date_from"]
+    date_to = initial_filters["date_to"]
 
     if status:
         tickets = tickets.filter(replacement__status=status)
@@ -548,6 +867,10 @@ def panel_replacements(request):
             "page_title": "Replacement",
             "page_obj": page_obj,
             "page_query": page_query,
+            "active_saved_view": active_saved_view,
+            "selected_view_id": selected_view_id,
+            "visible_columns": visible_columns,
+            "empty_colspan": len(visible_columns) + 1,
             "filters": {
                 "status": status,
                 "search": search,
@@ -623,12 +946,34 @@ def panel_reports(request):
     today = timezone.localdate()
     today_reports_count = Report.objects.filter(created_at__date=today).count()
 
-    service_type = request.GET.get("service_type", "").strip()
-    engineer_id = request.GET.get("engineer", "").strip()
-    status = request.GET.get("status", "").strip()
-    search = request.GET.get("search", "").strip()
-    date_from = request.GET.get("date_from", "").strip()
-    date_to = request.GET.get("date_to", "").strip()
+    saved_views = _get_saved_views_for_page(request.user, SavedViewPageType.REPORTS)
+    selected_view_id = (request.GET.get("view") or "").strip()
+    active_saved_view = None
+    if selected_view_id.isdigit():
+        active_saved_view = saved_views.filter(id=int(selected_view_id)).first()
+    elif not any(key in request.GET for key in ("service_type", "status", "engineer", "search", "date_from", "date_to", "columns")):
+        active_saved_view = saved_views.filter(is_default=True).first()
+        if active_saved_view:
+            selected_view_id = str(active_saved_view.id)
+
+    initial_filters = {key: "" for key in REPORT_FILTER_KEYS}
+    visible_columns = list(DEFAULT_REPORT_COLUMNS)
+    if active_saved_view:
+        initial_filters.update(active_saved_view.filters or {})
+        visible_columns = _normalize_columns(SavedViewPageType.REPORTS, active_saved_view.columns or [])
+    else:
+        for key in REPORT_FILTER_KEYS:
+            if key in request.GET:
+                initial_filters[key] = request.GET.get(key, "").strip()
+        if "columns" in request.GET:
+            visible_columns = _normalize_columns(SavedViewPageType.REPORTS, request.GET.getlist("columns"))
+
+    service_type = initial_filters["service_type"]
+    engineer_id = initial_filters["engineer"]
+    status = initial_filters["status"]
+    search = initial_filters["search"]
+    date_from = initial_filters["date_from"]
+    date_to = initial_filters["date_to"]
     service_reports = Report.objects.select_related("ticket", "engineer", "engineer__user", "ticket__customer").all()
     replacement_reports = (
         Replacement.objects.select_related("ticket", "ticket__customer")
@@ -726,6 +1071,10 @@ def panel_reports(request):
             "reports": report_rows,
             "page_title": "Reports",
             "engineers": engineers,
+            "active_saved_view": active_saved_view,
+            "selected_view_id": selected_view_id,
+            "visible_columns": visible_columns,
+            "empty_colspan": len(visible_columns) + 1,
             "filters": {
                 "service_type": service_type,
                 "engineer": engineer_id,
@@ -742,7 +1091,14 @@ def panel_reports(request):
 def panel_report_detail(request, report_id):
     if not request.user.is_staff:
         return redirect("panel:panel_login")
-    report = Report.objects.select_related("ticket", "engineer", "engineer__user").get(id=report_id)
+    report = Report.objects.select_related(
+        "ticket",
+        "ticket__customer",
+        "ticket__assigned_engineer",
+        "ticket__assigned_engineer__user",
+        "engineer",
+        "engineer__user",
+    ).get(id=report_id)
     return render(request, "panel/report_detail.html", {"report": report, "page_title": f"Report {report.ticket.ticket_id}"})
 
 

@@ -1,0 +1,256 @@
+{% extends "panel/base.html" %}
+
+{% block content %}
+  <div class="card">
+    <div class="section-header">
+      <strong>Lists</strong>
+      <span class="muted">Central manager for saved views across tickets, replacements, and reports.</span>
+    </div>
+
+    <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
+      {% for page_value, page_label in page_type_choices %}
+        <a
+          href="{% url 'panel:panel_lists' %}?page_type={{ page_value }}"
+          class="btn"
+          style="{% if current_page_type == page_value %}background:#0e61a5;color:white;border-color:#0e61a5;{% else %}background:#f8fafc;{% endif %}"
+        >
+          {{ page_label }}
+        </a>
+      {% endfor %}
+    </div>
+
+    <div style="margin-top:16px;padding:14px;border:1px solid #e2e8f0;border-radius:16px;background:#f8fbff;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <div>
+          <div style="font-size:15px;font-weight:700;color:#0f172a;">{{ current_page_label }} Lists</div>
+          <div class="muted" style="font-size:13px;">Choose a source above, then create and manage saved views for that page.</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:12px;overflow:auto;">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Default</th>
+            <th>Page</th>
+            <th>Updated</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for saved_view in saved_views %}
+            <tr>
+              <td style="font-weight:600;color:#0f172a;">{{ saved_view.name }}</td>
+              <td>
+                {% if saved_view.is_default %}
+                  <span style="display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;background:#dcfce7;color:#166534;font-size:12px;font-weight:700;">Default</span>
+                {% else %}
+                  <span class="muted">-</span>
+                {% endif %}
+              </td>
+              <td>
+                <span style="display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;background:#e0f2fe;color:#075985;font-size:12px;font-weight:700;">{{ saved_view.get_page_type_display }}</span>
+              </td>
+              <td>{{ saved_view.updated_at|date:"Y-m-d H:i" }}</td>
+              <td style="display:flex;gap:8px;flex-wrap:wrap;">
+                <a class="btn" href="{% if saved_view.page_type == 'TICKETS' %}{% url 'panel:panel_tickets' %}{% elif saved_view.page_type == 'REPLACEMENTS' %}{% url 'panel:panel_replacements' %}{% else %}{% url 'panel:panel_reports' %}{% endif %}?view={{ saved_view.id }}">Open</a>
+                <a class="btn" href="{% url 'panel:panel_lists' %}?page_type={{ saved_view.page_type }}&view={{ saved_view.id }}&mode=edit#list-setup">Edit</a>
+                <form method="post" style="margin:0;">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="delete_view" />
+                  <input type="hidden" name="view_id" value="{{ saved_view.id }}" />
+                  <input type="hidden" name="page_type" value="{{ current_page_type }}" />
+                  <button class="btn" type="submit">Delete</button>
+                </form>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5" class="muted">No saved {{ current_page_label|lower }} lists yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if not editor_open %}
+      <div style="margin-top:18px;padding:18px;border:1px dashed #cbd5e1;border-radius:16px;background:linear-gradient(180deg,#ffffff,#f8fbff);text-align:center;">
+        <div style="font-size:15px;font-weight:700;color:#0f172a;">Create a new {{ current_page_label|lower }} list</div>
+        <div class="muted" style="font-size:13px;margin-top:6px;">Save a set of filters and columns, then reopen it anytime from the main pages.</div>
+        <div style="margin-top:14px;">
+          <a class="btn primary" href="{% url 'panel:panel_lists' %}?page_type={{ current_page_type }}&mode=new#list-setup">New List</a>
+        </div>
+      </div>
+    {% endif %}
+
+    {% if editor_open %}
+    <form class="filters" method="post" style="margin-top:18px;" id="list-setup">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save_view" />
+      <input type="hidden" name="page_type" value="{{ current_page_type }}" />
+      <input type="hidden" name="editor_mode" value="{{ editor_mode|default:'new' }}" />
+      <input type="hidden" name="editing_view_id" value="{{ editing_view_id }}" />
+      <input type="hidden" name="selected_columns" id="selected-columns" value="{% for column_id in visible_columns %}{% if not forloop.first %},{% endif %}{{ column_id }}{% endfor %}" />
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <div>
+          <div style="font-size:15px;font-weight:700;color:#0f172a;">{% if editor_mode == "edit" %}Edit List{% else %}New List{% endif %}</div>
+          <div class="muted" style="font-size:13px;">Source: {{ current_page_label }}. Pick only the filters and columns this list should remember.</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          {% if active_saved_view %}
+            <a class="btn" href="{% if current_page_type == 'TICKETS' %}{% url 'panel:panel_tickets' %}{% elif current_page_type == 'REPLACEMENTS' %}{% url 'panel:panel_replacements' %}{% else %}{% url 'panel:panel_reports' %}{% endif %}?view={{ active_saved_view.id }}">Open This List</a>
+          {% endif %}
+          <a class="btn" href="{% url 'panel:panel_lists' %}?page_type={{ current_page_type }}">Close</a>
+        </div>
+      </div>
+
+      <div style="padding:14px;border:1px solid #e2e8f0;border-radius:14px;background:#fff;">
+        <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:12px;">Basics</div>
+        <div class="grid cols-3">
+          <div>
+            <label>List Name</label>
+            <input type="text" name="view_name" placeholder="Example: My {{ current_page_label }} List" value="{{ view_name }}" />
+          </div>
+          <div>
+            <label>Default</label>
+            <label style="display:inline-flex;align-items:center;gap:8px;margin:0;padding:10px 12px;border:1px solid #e2e8f0;border-radius:12px;background:#fff;text-transform:none;letter-spacing:0;color:#0f172a;">
+              <input type="checkbox" name="is_default" value="1" {% if is_default %}checked{% endif %} style="width:auto;margin:0;" />
+              <span>Use as default</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding:14px;border:1px solid #e2e8f0;border-radius:14px;background:#fff;">
+        <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:12px;">Saved Filters</div>
+        <div class="muted" style="font-size:12px;margin-bottom:12px;">Leave any field blank if you do not want this list to filter by it.</div>
+        {% if current_page_type == "TICKETS" or current_page_type == "REPORTS" %}
+          <div class="grid cols-3">
+            <div>
+              <label>Type</label>
+              <select name="service_type">
+                <option value="">All</option>
+                <option value="ONSITE" {% if filters.service_type == "ONSITE" %}selected{% endif %}>Onsite</option>
+                <option value="REPLACEMENT" {% if filters.service_type == "REPLACEMENT" %}selected{% endif %}>Replacement</option>
+              </select>
+            </div>
+            <div>
+              <label>Status</label>
+              <select name="status">
+                <option value="">All</option>
+                <option value="ASSIGNED" {% if filters.status == "ASSIGNED" %}selected{% endif %}>Assigned</option>
+                <option value="IN_PROGRESS" {% if filters.status == "IN_PROGRESS" %}selected{% endif %}>In Progress</option>
+                <option value="COMPLETED" {% if filters.status == "COMPLETED" %}selected{% endif %}>Completed</option>
+              </select>
+            </div>
+            <div>
+              <label>Engineer</label>
+              <select name="engineer">
+                <option value="">All</option>
+                {% for engineer in engineers %}
+                  <option value="{{ engineer.id }}" {% if filters.engineer == engineer.id|stringformat:"s" %}selected{% endif %}>{{ engineer.display_name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="grid cols-3" style="margin-top:12px;">
+            <div>
+              <label>Search</label>
+              <input type="text" name="search" placeholder="Ticket ID / Name / Phone / Issue" value="{{ filters.search }}" />
+            </div>
+            <div>
+              <label>From</label>
+              <input type="date" name="date_from" value="{{ filters.date_from }}" />
+            </div>
+            <div>
+              <label>To</label>
+              <input type="date" name="date_to" value="{{ filters.date_to }}" />
+            </div>
+          </div>
+        {% elif current_page_type == "REPLACEMENTS" %}
+          <div class="grid cols-3">
+            <div>
+              <label>Status</label>
+              <select name="status">
+                <option value="">All</option>
+                <option value="DRAFT" {% if filters.status == "DRAFT" %}selected{% endif %}>Draft</option>
+                <option value="READY" {% if filters.status == "READY" %}selected{% endif %}>Ready</option>
+                <option value="DISPATCHED" {% if filters.status == "DISPATCHED" %}selected{% endif %}>Dispatched</option>
+                <option value="COMPLETED" {% if filters.status == "COMPLETED" %}selected{% endif %}>Completed</option>
+              </select>
+            </div>
+            <div>
+              <label>Search</label>
+              <input type="text" name="search" placeholder="Ticket ID / Name / Phone / Issue" value="{{ filters.search }}" />
+            </div>
+            <div>
+              <label>From</label>
+              <input type="date" name="date_from" value="{{ filters.date_from }}" />
+            </div>
+          </div>
+          <div class="grid cols-3" style="margin-top:12px;">
+            <div>
+              <label>To</label>
+              <input type="date" name="date_to" value="{{ filters.date_to }}" />
+            </div>
+          </div>
+        {% endif %}
+      </div>
+
+      <div style="padding:14px;border:1px solid #e2e8f0;border-radius:14px;background:#fff;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+          <div>
+            <div style="font-size:13px;font-weight:700;color:#0f172a;">Visible Columns</div>
+            <div class="muted" style="font-size:12px;">Choose which columns appear when this list is opened.</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          {% for column_id, column_label in column_choices %}
+            <label style="display:inline-flex;align-items:center;gap:8px;margin:0;padding:8px 10px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc;text-transform:none;letter-spacing:0;font-size:13px;color:#0f172a;font-weight:500;">
+              <input type="checkbox" name="columns" value="{{ column_id }}" {% if column_id in visible_columns %}checked{% endif %} style="width:auto;margin:0;" />
+              <span>{{ column_label }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn primary" type="submit">Save List</button>
+        <a class="btn" href="{% url 'panel:panel_lists' %}?page_type={{ current_page_type }}&mode=new#list-setup">New List</a>
+        {% if saved_view_success %}
+          <span style="color:#166534;font-size:13px;">{{ saved_view_success }}</span>
+        {% endif %}
+        {% if saved_view_error %}
+          <span style="color:#b91c1c;font-size:13px;">{{ saved_view_error }}</span>
+        {% endif %}
+      </div>
+    </form>
+    {% endif %}
+  </div>
+  {% if editor_open %}
+    <script>
+      (function () {
+        var form = document.getElementById("list-setup");
+        var target = document.getElementById("selected-columns");
+        if (!form || !target) return;
+
+        function syncSelectedColumns() {
+          var selected = [];
+          var inputs = form.querySelectorAll('input[name="columns"]:checked');
+          inputs.forEach(function (input) {
+            selected.push(input.value);
+          });
+          target.value = selected.join(",");
+        }
+
+        form.addEventListener("change", function (event) {
+          if (event.target && event.target.name === "columns") {
+            syncSelectedColumns();
+          }
+        });
+        form.addEventListener("submit", syncSelectedColumns);
+        syncSelectedColumns();
+      })();
+    </script>
+  {% endif %}
+{% endblock %}

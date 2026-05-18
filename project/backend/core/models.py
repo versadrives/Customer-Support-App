@@ -77,6 +77,32 @@ class Item(models.Model):
         return self.name
 
 
+class SavedViewPageType(models.TextChoices):
+    TICKETS = 'TICKETS', 'Tickets'
+    REPLACEMENTS = 'REPLACEMENTS', 'Replacements'
+    REPORTS = 'REPORTS', 'Reports'
+
+
+class SavedView(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='saved_views')
+    page_type = models.CharField(max_length=20, choices=SavedViewPageType.choices)
+    name = models.CharField(max_length=120)
+    filters = models.JSONField(default=dict, blank=True)
+    columns = models.JSONField(default=list, blank=True)
+    is_default = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ('name',)
+        constraints = [
+            models.UniqueConstraint(fields=('user', 'page_type', 'name'), name='unique_saved_view_name_per_user_page'),
+        ]
+
+    def __str__(self) -> str:
+        return f'{self.get_page_type_display()}: {self.name}'
+
+
 class Ticket(models.Model):
     ticket_id = models.CharField(max_length=30, unique=True, blank=True)
     customer = models.ForeignKey(Customer, on_delete=models.PROTECT, related_name='tickets')

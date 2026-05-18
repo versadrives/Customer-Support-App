@@ -9,8 +9,17 @@
       </div>
       <a class="btn primary" href="{% url 'panel:panel_ticket_create' %}">Add Ticket</a>
     </div>
+    {% if active_saved_view %}
+      <div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 12px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fbff;">
+        <div class="muted" style="font-size:13px;">Active list: {{ active_saved_view.name }}</div>
+        <a class="btn" href="{% url 'panel:panel_lists' %}?view={{ active_saved_view.id }}">Manage Lists</a>
+      </div>
+    {% endif %}
     {% if PANEL_SHOW_FILTERS %}
       <form class="filters" method="get">
+        {% if selected_view_id %}
+          <input type="hidden" name="view" value="{{ selected_view_id }}" />
+        {% endif %}
         <div class="inline">
           <div>
             <label>Onsite / Replacement</label>
@@ -57,7 +66,8 @@
         </div>
         <div class="actions">
           <button class="btn primary" type="submit">Apply Filters</button>
-          <a class="btn" href="{% url 'panel:panel_tickets' %}">Clear</a>
+          <a class="btn" href="{% url 'panel:panel_lists' %}{% if active_saved_view %}?view={{ active_saved_view.id }}{% endif %}">Lists</a>
+          <a class="btn" href="{% url 'panel:panel_tickets' %}?clear=1">Clear</a>
         </div>
       </form>
     {% endif %}
@@ -65,33 +75,41 @@
       <table class="table">
         <thead>
           <tr>
-            <th>Ticket</th>
-            <th>Customer</th>
-            <th>Complaint</th>
-            <th>Phone</th>
-            <th>Status</th>
-            <th>Assigned</th>
-            <th>Created</th>
+            {% if "ticket_id" in visible_columns %}<th>Ticket</th>{% endif %}
+            {% if "customer" in visible_columns %}<th>Customer</th>{% endif %}
+            {% if "service_type" in visible_columns %}<th>Type</th>{% endif %}
+            {% if "complaint" in visible_columns %}<th>Complaint</th>{% endif %}
+            {% if "phone" in visible_columns %}<th>Phone</th>{% endif %}
+            {% if "location" in visible_columns %}<th>Location</th>{% endif %}
+            {% if "model" in visible_columns %}<th>Product</th>{% endif %}
+            {% if "purchase_date" in visible_columns %}<th>Purchase Date</th>{% endif %}
+            {% if "status" in visible_columns %}<th>Status</th>{% endif %}
+            {% if "assigned" in visible_columns %}<th>Assigned</th>{% endif %}
+            {% if "created" in visible_columns %}<th>Created</th>{% endif %}
             <th></th>
           </tr>
         </thead>
         <tbody>
           {% for t in tickets %}
             <tr>
-              <td>{{ t.ticket_id }}</td>
-              <td>{{ t.customer.name|capfirst }}</td>
-              <td>
+              {% if "ticket_id" in visible_columns %}<td>{{ t.ticket_id }}</td>{% endif %}
+              {% if "customer" in visible_columns %}<td>{{ t.customer.name|capfirst }}</td>{% endif %}
+              {% if "service_type" in visible_columns %}<td>{{ t.get_service_type_display }}</td>{% endif %}
+              {% if "complaint" in visible_columns %}<td>
                 <div>{{ t.issue|capfirst }}</div>
                 <div class="muted">{{ t.issue_notes|default:"-"|capfirst }}</div>
-              </td>
-              <td>{{ t.customer.contact_phone|default:"-" }}</td>
-              <td>{% if t.service_type == "REPLACEMENT" %}Replacement{% else %}{{ t.status }}{% endif %}</td>
-              <td>{% if t.service_type == "REPLACEMENT" %}-{% elif t.assigned_engineer %}{{ t.assigned_engineer.display_name }}{% else %}-{% endif %}</td>
-              <td>{{ t.created_at|date:"Y-m-d H:i" }}</td>
+              </td>{% endif %}
+              {% if "phone" in visible_columns %}<td>{{ t.customer.contact_phone|default:"-" }}</td>{% endif %}
+              {% if "location" in visible_columns %}<td>{{ t.location|default:"-" }}</td>{% endif %}
+              {% if "model" in visible_columns %}<td>{{ t.model|default:"-" }}</td>{% endif %}
+              {% if "purchase_date" in visible_columns %}<td>{{ t.purchase_date|date:"Y-m-d"|default:"-" }}</td>{% endif %}
+              {% if "status" in visible_columns %}<td>{% if t.service_type == "REPLACEMENT" %}Replacement{% else %}{{ t.status }}{% endif %}</td>{% endif %}
+              {% if "assigned" in visible_columns %}<td>{% if t.service_type == "REPLACEMENT" %}-{% elif t.assigned_engineer %}{{ t.assigned_engineer.display_name }}{% else %}-{% endif %}</td>{% endif %}
+              {% if "created" in visible_columns %}<td>{{ t.created_at|date:"Y-m-d H:i" }}</td>{% endif %}
               <td><a class="btn" href="{% url 'panel:panel_ticket_edit' t.id %}">Update</a></td>
             </tr>
           {% empty %}
-            <tr><td colspan="8" class="muted">No tickets found.</td></tr>
+            <tr><td colspan="{{ empty_colspan }}" class="muted">No tickets found.</td></tr>
           {% endfor %}
         </tbody>
       </table>

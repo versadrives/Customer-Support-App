@@ -6,6 +6,7 @@ urlpatterns = [
     path("login/", panel_views.panel_login, name="panel_login"),
     path("logout/", panel_views.panel_logout, name="panel_logout"),
     path("", panel_views.panel_index, name="panel_index"),
+    path("lists/", panel_views.panel_lists, name="panel_lists"),
     path("tickets/", panel_views.panel_tickets, name="panel_tickets"),
     path("tickets/new/", panel_views.panel_ticket_create, name="panel_ticket_create"),
     path("tickets/issues/add/", panel_views.panel_issue_option_create, name="panel_issue_option_create"),
