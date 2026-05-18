@@ -359,6 +359,8 @@ def panel_index(request):
 def panel_lists(request):
     if not request.user.is_staff:
         return redirect("panel:panel_login")
+    if not getattr(settings, "PANEL_SHOW_LISTS", True):
+        return redirect("panel:panel_tickets")
 
     saved_view_error = ""
     saved_view_success = ""

@@ -257,7 +257,9 @@
         </div>
         <nav class="nav">
           <a href="/panel/" class="{% if page_title == 'Dashboard' %}active{% endif %}">Dashboard</a>
-          <a href="/panel/lists/" class="{% if page_title == 'Lists' %}active{% endif %}">Lists</a>
+          {% if PANEL_SHOW_LISTS %}
+            <a href="/panel/lists/" class="{% if page_title == 'Lists' %}active{% endif %}">Lists</a>
+          {% endif %}
           <a href="/panel/tickets/" class="{% if page_title == 'Tickets' %}active{% endif %}">Tickets</a>
           <a href="/panel/replacements/" class="{% if page_title == 'Replacement' %}active{% endif %}">Replacement</a>
           <a href="/panel/engineers/" class="{% if page_title == 'Engineers' %}active{% endif %}">Engineers</a>

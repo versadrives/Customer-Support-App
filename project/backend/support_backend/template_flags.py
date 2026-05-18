@@ -6,4 +6,5 @@ def panel_flags(request):
         "PANEL_SHOW_FILTERS": getattr(settings, "PANEL_SHOW_FILTERS", True),
         "PANEL_SHOW_ENGINEER_ADD": getattr(settings, "PANEL_SHOW_ENGINEER_ADD", True),
         "PANEL_SHOW_ADMIN_LINK": getattr(settings, "PANEL_SHOW_ADMIN_LINK", True),
+        "PANEL_SHOW_LISTS": getattr(settings, "PANEL_SHOW_LISTS", True),
     }

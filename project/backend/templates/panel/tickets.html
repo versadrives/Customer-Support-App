@@ -12,7 +12,9 @@
     {% if active_saved_view %}
       <div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 12px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fbff;">
         <div class="muted" style="font-size:13px;">Active list: {{ active_saved_view.name }}</div>
-        <a class="btn" href="{% url 'panel:panel_lists' %}?view={{ active_saved_view.id }}">Manage Lists</a>
+        {% if PANEL_SHOW_LISTS %}
+          <a class="btn" href="{% url 'panel:panel_lists' %}?view={{ active_saved_view.id }}">Manage Lists</a>
+        {% endif %}
       </div>
     {% endif %}
     {% if PANEL_SHOW_FILTERS %}
@@ -66,7 +68,9 @@
         </div>
         <div class="actions">
           <button class="btn primary" type="submit">Apply Filters</button>
-          <a class="btn" href="{% url 'panel:panel_lists' %}{% if active_saved_view %}?view={{ active_saved_view.id }}{% endif %}">Lists</a>
+          {% if PANEL_SHOW_LISTS %}
+            <a class="btn" href="{% url 'panel:panel_lists' %}{% if active_saved_view %}?view={{ active_saved_view.id }}{% endif %}">Lists</a>
+          {% endif %}
           <a class="btn" href="{% url 'panel:panel_tickets' %}?clear=1">Clear</a>
         </div>
       </form>
