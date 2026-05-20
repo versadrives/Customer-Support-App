@@ -103,7 +103,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 0),
+                        const SizedBox(height: 6),
                         Transform.translate(
                           offset: const Offset(0, -1),
                           child: Column(
