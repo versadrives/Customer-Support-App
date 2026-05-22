@@ -25,7 +25,7 @@ class AdminPasswordResetForm(forms.Form):
         help_text=password_validation.password_validators_help_text_html(),
     )
     confirm_password = forms.CharField(widget=forms.PasswordInput)
-    superadmin_password = forms.CharField(widget=forms.PasswordInput, label="Your Superadmin Password")
+    superadmin_password = forms.CharField(widget=forms.PasswordInput, label="Your Admin Password")
 
     def __init__(self, *args, **kwargs):
         self.target_user = kwargs.pop("target_user", None)
@@ -39,7 +39,7 @@ class AdminPasswordResetForm(forms.Form):
         superadmin_pass = cleaned_data.get("superadmin_password", "")
 
         if not self.superadmin_user.check_password(superadmin_pass):
-            raise forms.ValidationError("Superadmin password is incorrect.")
+            raise forms.ValidationError("Your password is incorrect.")
 
         if new_pass != confirm_pass:
             raise forms.ValidationError("New passwords do not match.")
@@ -92,8 +92,8 @@ def _clear_reset_failures(request, profile_type, profile_id):
 
 
 def admin_password_reset(request, profile_type, profile_id):
-    if not request.user.is_superuser:
-        messages.error(request, "Only superadmins can reset passwords.")
+    if not (request.user.is_staff or request.user.is_superuser):
+        messages.error(request, "Only admins can reset passwords.")
         return HttpResponseRedirect(request.META.get("HTTP_REFERER", "/admin/"))
 
     if request.method == "POST" and _is_reset_locked_out(request, profile_type, profile_id):
@@ -387,7 +387,7 @@ class AdminProfileAdmin(admin.ModelAdmin):
 
     def changeform_view(self, request, object_id=None, form_url='', extra_context=None):
         extra_context = extra_context or {}
-        extra_context['show_reset_password'] = request.user.is_superuser
+        extra_context['show_reset_password'] = request.user.is_staff or request.user.is_superuser
         return super().changeform_view(request, object_id, form_url, extra_context)
 
     def submit_row(self, context, context_variable_name='change'):
@@ -418,7 +418,7 @@ class EngineerProfileAdmin(admin.ModelAdmin):
 
     def changeform_view(self, request, object_id=None, form_url='', extra_context=None):
         extra_context = extra_context or {}
-        extra_context['show_reset_password'] = request.user.is_superuser
+        extra_context['show_reset_password'] = request.user.is_staff or request.user.is_superuser
         return super().changeform_view(request, object_id, form_url, extra_context)
 
     def submit_row(self, context, context_variable_name='change'):

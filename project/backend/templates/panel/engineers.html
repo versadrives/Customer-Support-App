@@ -16,7 +16,7 @@
             <th>Username</th>
             <th>Phone</th>
             <th>Active</th>
-            <th></th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -26,10 +26,14 @@
               <td>{{ e.user.username }}</td>
               <td>{{ e.phone|default:"-" }}</td>
               <td>{% if e.active %}Yes{% else %}No{% endif %}</td>
-              <td>-</td>
+              <td>
+                {% if request.user.is_staff or request.user.is_superuser %}
+                  <a href="{% url 'panel:panel_engineer_password_reset' e.id %}" class="btn btn-sm btn-outline-primary">Reset Password</a>
+                {% endif %}
+              </td>
             </tr>
           {% empty %}
-            <tr><td colspan="5" class="muted">No engineers found.</td></tr>
+            <tr><td colspan="6" class="muted">No engineers found.</td></tr>
           {% endfor %}
         </tbody>
       </table>

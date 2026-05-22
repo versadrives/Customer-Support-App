@@ -12,7 +12,11 @@ import '../widgets/panel.dart';
 import '../widgets/status_pill.dart';
 
 class TaskDetailScreen extends StatefulWidget {
-  const TaskDetailScreen({super.key, required this.ticket, required this.engineerName});
+  const TaskDetailScreen({
+    super.key,
+    required this.ticket,
+    required this.engineerName,
+  });
   final AppTicket ticket;
   final String engineerName;
 
@@ -21,6 +25,11 @@ class TaskDetailScreen extends StatefulWidget {
 }
 
 class _TaskDetailScreenState extends State<TaskDetailScreen> {
+  static const double _uploadImageMaxWidth = 1600;
+  static const double _uploadImageMaxHeight = 1600;
+  static const int _cameraImageQuality = 65;
+  static const int _galleryImageQuality = 75;
+
   final _serialNumber = TextEditingController();
   final _problemIdentified = TextEditingController();
   final _action = TextEditingController();
@@ -39,7 +48,9 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _reportFuture = ApiClient.fetchReports(ticketId: widget.ticket.ticketId).then((list) => list.isNotEmpty ? list.first : null);
+    _reportFuture = ApiClient.fetchReports(
+      ticketId: widget.ticket.ticketId,
+    ).then((list) => list.isNotEmpty ? list.first : null);
   }
 
   @override
@@ -54,8 +65,18 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     super.dispose();
   }
 
-  Future<void> _pickPhoto({required bool before, required ImageSource source}) async {
-    final picked = await _picker.pickImage(source: source, imageQuality: 80);
+  Future<void> _pickPhoto({
+    required bool before,
+    required ImageSource source,
+  }) async {
+    final picked = await _picker.pickImage(
+      source: source,
+      imageQuality: source == ImageSource.camera
+          ? _cameraImageQuality
+          : _galleryImageQuality,
+      maxWidth: _uploadImageMaxWidth,
+      maxHeight: _uploadImageMaxHeight,
+    );
     if (!mounted) return;
     if (picked == null) return;
     setState(() {
@@ -76,18 +97,27 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to start job. $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to start job. $e')));
     }
   }
 
   Future<void> _complete() async {
-    if (_serialNumber.text.trim().isEmpty || _problemIdentified.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Serial number and problem identified are required')));
+    if (_serialNumber.text.trim().isEmpty ||
+        _problemIdentified.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Serial number and problem identified are required'),
+        ),
+      );
       return;
     }
     final kmsText = _kmsDriven.text.trim();
     if (kmsText.isNotEmpty && int.tryParse(kmsText) == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter valid numbers for KM\'s driven')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter valid numbers for KM\'s driven')),
+      );
       return;
     }
     try {
@@ -96,9 +126,13 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         serialNumber: _serialNumber.text.trim(),
         problemIdentified: _problemIdentified.text.trim(),
         actionTaken: _action.text.trim().isEmpty ? null : _action.text.trim(),
-        pcbBoardNumber: _pcbBoardNumber.text.trim().isEmpty ? null : _pcbBoardNumber.text.trim(),
+        pcbBoardNumber: _pcbBoardNumber.text.trim().isEmpty
+            ? null
+            : _pcbBoardNumber.text.trim(),
         comments: _comments.text.trim().isEmpty ? null : _comments.text.trim(),
-        chargesCollected: _chargesCollected.text.trim().isEmpty ? null : _chargesCollected.text.trim(),
+        chargesCollected: _chargesCollected.text.trim().isEmpty
+            ? null
+            : _chargesCollected.text.trim(),
         kmsDriven: kmsText.isEmpty ? null : kmsText,
         isCustomerPolite: _isCustomerPolite,
         difficultToAttend: _difficultToAttend,
@@ -111,11 +145,16 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
       Navigator.of(context).pop();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to submit report. $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to submit report. $e')));
     }
   }
 
-  Future<void> _scanInto(TextEditingController controller, {required String title}) async {
+  Future<void> _scanInto(
+    TextEditingController controller, {
+    required String title,
+  }) async {
     final value = await Navigator.of(context).push<String>(
       MaterialPageRoute(builder: (_) => QrScanScreen(title: title)),
     );
@@ -168,7 +207,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                     suffixIcon: IconButton(
                       tooltip: 'Scan serial number',
                       icon: const Icon(Icons.qr_code_scanner),
-                      onPressed: () => _scanInto(_serialNumber, title: 'Scan Serial Number'),
+                      onPressed: () =>
+                          _scanInto(_serialNumber, title: 'Scan Serial Number'),
                     ),
                   ),
                 ),
@@ -186,7 +226,10 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           const SizedBox(height: 8),
           TextField(
             controller: _action,
-            decoration: const InputDecoration(labelText: 'Action taken', helperText: 'Optional'),
+            decoration: const InputDecoration(
+              labelText: 'Action taken',
+              helperText: 'Optional',
+            ),
           ),
           const SizedBox(height: 8),
           TextField(
@@ -197,12 +240,21 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               suffixIcon: IconButton(
                 tooltip: 'Scan PCB barcode',
                 icon: const Icon(Icons.qr_code_scanner),
-                onPressed: () => _scanInto(_pcbBoardNumber, title: 'Scan PCB Barcode (Optional)'),
+                onPressed: () => _scanInto(
+                  _pcbBoardNumber,
+                  title: 'Scan PCB Barcode (Optional)',
+                ),
               ),
             ),
           ),
           const SizedBox(height: 8),
-          TextField(controller: _comments, decoration: const InputDecoration(labelText: 'Comments', helperText: 'Optional')),
+          TextField(
+            controller: _comments,
+            decoration: const InputDecoration(
+              labelText: 'Comments',
+              helperText: 'Optional',
+            ),
+          ),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -210,7 +262,10 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 child: TextField(
                   controller: _chargesCollected,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Charges collected', helperText: 'Optional'),
+                  decoration: const InputDecoration(
+                    labelText: 'Charges collected',
+                    helperText: 'Optional',
+                  ),
                 ),
               ),
               const SizedBox(width: 10),
@@ -218,7 +273,10 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 child: TextField(
                   controller: _kmsDriven,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'KM\'s driven', helperText: 'Optional'),
+                  decoration: const InputDecoration(
+                    labelText: 'KM\'s driven',
+                    helperText: 'Optional',
+                  ),
                 ),
               ),
             ],
@@ -240,15 +298,19 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           _PhotoPickerRow(
             title: 'Before Service Photo',
             file: _beforePhoto,
-            onCamera: () => _pickPhoto(before: true, source: ImageSource.camera),
-            onGallery: () => _pickPhoto(before: true, source: ImageSource.gallery),
+            onCamera: () =>
+                _pickPhoto(before: true, source: ImageSource.camera),
+            onGallery: () =>
+                _pickPhoto(before: true, source: ImageSource.gallery),
           ),
           const SizedBox(height: 12),
           _PhotoPickerRow(
             title: 'After Service Photo',
             file: _afterPhoto,
-            onCamera: () => _pickPhoto(before: false, source: ImageSource.camera),
-            onGallery: () => _pickPhoto(before: false, source: ImageSource.gallery),
+            onCamera: () =>
+                _pickPhoto(before: false, source: ImageSource.camera),
+            onGallery: () =>
+                _pickPhoto(before: false, source: ImageSource.gallery),
           ),
           const SizedBox(height: 12),
           SizedBox(
@@ -267,7 +329,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final t = widget.ticket;
-    final canStart = AuthStore.role == AppRole.engineer && t.status == TicketStatus.assigned;
+    final canStart =
+        AuthStore.role == AppRole.engineer && t.status == TicketStatus.assigned;
     return Scaffold(
       appBar: AppBar(title: Text('Task ${t.ticketId}')),
       body: ListView(
@@ -279,11 +342,18 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Customer: ${t.customerName}', style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text(
+                  'Customer: ${t.customerName}',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: 4),
-                Text('Phone: ${t.customerPhone.isEmpty ? '-' : t.customerPhone}'),
+                Text(
+                  'Phone: ${t.customerPhone.isEmpty ? '-' : t.customerPhone}',
+                ),
                 const SizedBox(height: 4),
-                Text('Address: ${t.customerAddress.isEmpty ? '-' : t.customerAddress}'),
+                Text(
+                  'Address: ${t.customerAddress.isEmpty ? '-' : t.customerAddress}',
+                ),
                 const SizedBox(height: 4),
                 Text('Location: ${t.location}'),
                 const SizedBox(height: 8),
@@ -298,11 +368,20 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 StatusPill(status: t.status),
                 if (canStart) ...[
                   const SizedBox(height: 12),
-                  FilledButton.icon(onPressed: _start, icon: const Icon(Icons.play_arrow), label: const Text('Start Job')),
+                  FilledButton.icon(
+                    onPressed: _start,
+                    icon: const Icon(Icons.play_arrow),
+                    label: const Text('Start Job'),
+                  ),
                 ],
-                if (!canStart && t.status == TicketStatus.assigned && AuthStore.role != AppRole.engineer) ...[
+                if (!canStart &&
+                    t.status == TicketStatus.assigned &&
+                    AuthStore.role != AppRole.engineer) ...[
                   const SizedBox(height: 12),
-                  const Text('Only the assigned engineer can start this job.', style: TextStyle(color: Color(0xFF5A6E7A))),
+                  const Text(
+                    'Only the assigned engineer can start this job.',
+                    style: TextStyle(color: Color(0xFF5A6E7A)),
+                  ),
                 ],
               ],
             ),
@@ -318,7 +397,10 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 );
               }
               if (snapshot.hasError) {
-                return _buildReportForm(errorMessage: 'Unable to load existing report: ${snapshot.error}');
+                return _buildReportForm(
+                  errorMessage:
+                      'Unable to load existing report: ${snapshot.error}',
+                );
               }
               final report = snapshot.data;
               if (report != null) {
@@ -333,22 +415,36 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                       const SizedBox(height: 4),
                       Text('Problem Identified: ${report.problemIdentified}'),
                       const SizedBox(height: 4),
-                      Text('Action Taken: ${report.actionTaken.isNotEmpty ? report.actionTaken : 'None'}'),
+                      Text(
+                        'Action Taken: ${report.actionTaken.isNotEmpty ? report.actionTaken : 'None'}',
+                      ),
                       const SizedBox(height: 4),
-                      Text('PCB Board Number: ${report.pcbBoardNumber.isNotEmpty ? report.pcbBoardNumber : 'None'}'),
+                      Text(
+                        'PCB Board Number: ${report.pcbBoardNumber.isNotEmpty ? report.pcbBoardNumber : 'None'}',
+                      ),
                       const SizedBox(height: 4),
-                      Text('Comments: ${report.comments.isNotEmpty ? report.comments : 'None'}'),
+                      Text(
+                        'Comments: ${report.comments.isNotEmpty ? report.comments : 'None'}',
+                      ),
                       const SizedBox(height: 4),
                       Text('Charges Collected: ${report.chargesCollected}'),
                       const SizedBox(height: 4),
                       Text('KM\'s Driven: ${report.kmsDriven}'),
                       const SizedBox(height: 4),
-                      Text('Customer Polite: ${report.isCustomerPolite ? 'Yes' : 'No'}'),
+                      Text(
+                        'Customer Polite: ${report.isCustomerPolite ? 'Yes' : 'No'}',
+                      ),
                       const SizedBox(height: 4),
-                      Text('Difficult to Attend: ${report.difficultToAttend ? 'Yes' : 'No'}'),
+                      Text(
+                        'Difficult to Attend: ${report.difficultToAttend ? 'Yes' : 'No'}',
+                      ),
                       const SizedBox(height: 8),
-                      if (report.beforeServicePhoto != null || report.afterServicePhoto != null) ...[
-                        const Text('Photos:', style: TextStyle(fontWeight: FontWeight.bold)),
+                      if (report.beforeServicePhoto != null ||
+                          report.afterServicePhoto != null) ...[
+                        const Text(
+                          'Photos:',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                         const SizedBox(height: 4),
                         Row(
                           children: [
@@ -363,8 +459,12 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                   child: Image.network(
                                     '$apiBaseUrl/media/${report.beforeServicePhoto}',
                                     fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) =>
-                                        const Icon(Icons.broken_image, size: 50),
+                                    errorBuilder:
+                                        (context, error, stackTrace) =>
+                                            const Icon(
+                                              Icons.broken_image,
+                                              size: 50,
+                                            ),
                                   ),
                                 ),
                               ),
@@ -380,8 +480,12 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                   child: Image.network(
                                     '$apiBaseUrl/media/${report.afterServicePhoto}',
                                     fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) =>
-                                        const Icon(Icons.broken_image, size: 50),
+                                    errorBuilder:
+                                        (context, error, stackTrace) =>
+                                            const Icon(
+                                              Icons.broken_image,
+                                              size: 50,
+                                            ),
                                   ),
                                 ),
                               ),
@@ -465,4 +569,3 @@ class _PhotoPickerRow extends StatelessWidget {
     );
   }
 }
-

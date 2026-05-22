@@ -1136,3 +1136,57 @@ def panel_admins(request):
             "page_title": "Admin Profiles",
         },
     )
+
+
+@login_required(login_url="/panel/login/")
+def panel_engineer_password_reset(request, engineer_id):
+    if not request.user.is_staff:
+        return redirect("panel:login")
+
+    # Allow all staff users to reset passwords (not just superusers)
+    engineer = get_object_or_404(EngineerProfile, id=engineer_id)
+
+    if request.method == "POST":
+        new_password = request.POST.get("new_password")
+        confirm_password = request.POST.get("confirm_password")
+
+        if not new_password or not confirm_password:
+            return render(request, "panel/engineer_password_reset.html", {
+                "engineer": engineer,
+                "error": "Both password fields are required.",
+                "page_title": f"Reset Password for {engineer.user.username}"
+            })
+
+        if new_password != confirm_password:
+            return render(request, "panel/engineer_password_reset.html", {
+                "engineer": engineer,
+                "error": "Passwords do not match.",
+                "page_title": f"Reset Password for {engineer.user.username}"
+            })
+
+        # Validate password using Django's password validation
+        from django.contrib.auth import password_validation
+        from django.core.exceptions import ValidationError
+
+        try:
+            password_validation.validate_password(new_password, engineer.user)
+        except ValidationError as e:
+            return render(request, "panel/engineer_password_reset.html", {
+                "engineer": engineer,
+                "error": "; ".join(e.messages),
+                "page_title": f"Reset Password for {engineer.user.username}"
+            })
+
+        # Set the new password
+        engineer.user.set_password(new_password)
+        engineer.user.save()
+
+        # Redirect back to engineers list with success message
+        # For simplicity, we're just redirecting - in a real app you might want to add a success message
+        return redirect("panel:panel_engineers")
+
+    # GET request - show the form
+    return render(request, "panel/engineer_password_reset.html", {
+        "engineer": engineer,
+        "page_title": f"Reset Password for {engineer.user.username}"
+    })

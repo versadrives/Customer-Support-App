@@ -143,21 +143,10 @@ class TicketViewSet(viewsets.ModelViewSet):
         required_fields = [
             'serial_number',
             'problem_identified',
-            'action_taken',
-            'pcb_board_number',
-            'comments',
-            'charges_collected',
-            'kms_driven',
-            'is_customer_polite',
-            'difficult_to_attend',
         ]
         for field in required_fields:
             if field not in request.data or request.data.get(field) in (None, ''):
                 return Response({'detail': f'Missing {field}.'}, status=status.HTTP_400_BAD_REQUEST)
-        if 'before_service_photo' not in request.FILES:
-            return Response({'detail': 'Missing before_service_photo.'}, status=status.HTTP_400_BAD_REQUEST)
-        if 'after_service_photo' not in request.FILES:
-            return Response({'detail': 'Missing after_service_photo.'}, status=status.HTTP_400_BAD_REQUEST)
 
         if Report.objects.filter(ticket=ticket).exists():
             return Response({'detail': 'Report already exists for this ticket.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -169,11 +158,17 @@ class TicketViewSet(viewsets.ModelViewSet):
                 return value.strip().lower() in ('true', '1', 'yes', 'on')
             return False
 
+        def _optional_text(field_name):
+            value = request.data.get(field_name, '')
+            return value.strip() if isinstance(value, str) else ''
+
         try:
-            kms_driven = int(request.data['kms_driven'])
-            charges_collected = Decimal(str(request.data['charges_collected']))
-            is_customer_polite = _to_bool(request.data['is_customer_polite'])
-            difficult_to_attend = _to_bool(request.data['difficult_to_attend'])
+            kms_value = request.data.get('kms_driven', '')
+            charges_value = request.data.get('charges_collected', '')
+            kms_driven = int(kms_value) if str(kms_value).strip() else 0
+            charges_collected = Decimal(str(charges_value).strip() or '0')
+            is_customer_polite = _to_bool(request.data.get('is_customer_polite', False))
+            difficult_to_attend = _to_bool(request.data.get('difficult_to_attend', False))
         except (ValueError, TypeError, InvalidOperation, AttributeError):
             return Response({'detail': 'Invalid values.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -182,11 +177,11 @@ class TicketViewSet(viewsets.ModelViewSet):
                 ticket=ticket,
                 engineer=request.user.engineer_profile,
                 service_provider_code=request.user.username,
-                serial_number=request.data['serial_number'],
-                problem_identified=request.data['problem_identified'],
-                action_taken=request.data['action_taken'],
-                pcb_board_number=request.data['pcb_board_number'],
-                comments=request.data['comments'],
+                serial_number=request.data['serial_number'].strip(),
+                problem_identified=request.data['problem_identified'].strip(),
+                action_taken=_optional_text('action_taken'),
+                pcb_board_number=_optional_text('pcb_board_number'),
+                comments=_optional_text('comments'),
                 charges_collected=charges_collected,
                 kms_driven=kms_driven,
                 is_customer_polite=is_customer_polite,

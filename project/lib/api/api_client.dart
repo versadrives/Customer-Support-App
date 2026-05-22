@@ -12,33 +12,22 @@ class ApiClient {
   ApiClient._();
 
   static Uri _uri(String path) => Uri.parse('$apiBaseUrl$path');
-  static const List<int> _placeholderPngBytes = <int>[
-    137, 80, 78, 71, 13, 10, 26, 10,
-    0, 0, 0, 13, 73, 72, 68, 82,
-    0, 0, 0, 1, 0, 0, 0, 1,
-    8, 6, 0, 0, 0, 31, 21, 196,
-    137, 0, 0, 0, 13, 73, 68, 65,
-    84, 120, 156, 99, 248, 255, 255, 255,
-    127, 0, 9, 251, 3, 253, 5, 67,
-    69, 202, 0, 0, 0, 0, 73, 69,
-    78, 68, 174, 66, 96, 130,
-  ];
 
-  static Future<http.MultipartFile> _multipartFromXFile(String field, XFile file) async {
-    final bytes = await file.readAsBytes();
-    final fileName = file.name.isNotEmpty ? file.name : '${DateTime.now().millisecondsSinceEpoch}.jpg';
-    return http.MultipartFile.fromBytes(field, bytes, filename: fileName);
+  static Future<http.MultipartFile> _multipartFromXFile(
+    String field,
+    XFile file,
+  ) async {
+    final fileName = file.name.isNotEmpty
+        ? file.name
+        : '${DateTime.now().millisecondsSinceEpoch}.jpg';
+    return http.MultipartFile.fromPath(field, file.path, filename: fileName);
   }
 
-  static http.MultipartFile _placeholderImage(String field) {
-    return http.MultipartFile.fromBytes(
-      field,
-      _placeholderPngBytes,
-      filename: '${field}_placeholder.png',
-    );
-  }
-
-  static Future<void> login({required String username, required String password, required AppRole role}) async {
+  static Future<void> login({
+    required String username,
+    required String password,
+    required AppRole role,
+  }) async {
     final res = await http.post(
       _uri('/api/auth/token/'),
       headers: {'Content-Type': 'application/json'},
@@ -55,7 +44,10 @@ class ApiClient {
   }
 
   static Future<Map<String, dynamic>> fetchMe() async {
-    final res = await http.get(_uri('/api/me/'), headers: AuthStore.authHeaders());
+    final res = await http.get(
+      _uri('/api/me/'),
+      headers: AuthStore.authHeaders(),
+    );
     if (res.statusCode != 200) {
       throw Exception('Failed to load profile (${res.statusCode})');
     }
@@ -63,18 +55,27 @@ class ApiClient {
   }
 
   static Future<AppUpdateInfo> fetchAppUpdateInfo() async {
-    final res = await http.get(_uri('/api/app-update/'), headers: AuthStore.authHeaders());
+    final res = await http.get(
+      _uri('/api/app-update/'),
+      headers: AuthStore.authHeaders(),
+    );
     if (res.statusCode != 200) {
       throw Exception('Failed to load app update info (${res.statusCode})');
     }
     return AppUpdateInfo.fromApi(jsonDecode(res.body) as Map<String, dynamic>);
   }
 
-  static Future<void> changePassword({required String oldPassword, required String newPassword}) async {
+  static Future<void> changePassword({
+    required String oldPassword,
+    required String newPassword,
+  }) async {
     final res = await http.post(
       _uri('/api/change-password/'),
       headers: {'Content-Type': 'application/json', ...AuthStore.authHeaders()},
-      body: jsonEncode({'old_password': oldPassword, 'new_password': newPassword}),
+      body: jsonEncode({
+        'old_password': oldPassword,
+        'new_password': newPassword,
+      }),
     );
     if (res.statusCode != 204) {
       String detail = '';
@@ -88,30 +89,45 @@ class ApiClient {
   }
 
   static Future<List<AppTicket>> fetchTickets() async {
-    final res = await http.get(_uri('/api/tickets/'), headers: AuthStore.authHeaders());
+    final res = await http.get(
+      _uri('/api/tickets/'),
+      headers: AuthStore.authHeaders(),
+    );
     if (res.statusCode != 200) {
       throw Exception('Failed to load tickets (${res.statusCode})');
     }
     final list = jsonDecode(res.body) as List<dynamic>;
-    return list.map((e) => AppTicket.fromApi(e as Map<String, dynamic>)).toList();
+    return list
+        .map((e) => AppTicket.fromApi(e as Map<String, dynamic>))
+        .toList();
   }
 
   static Future<List<EngineerProfile>> fetchEngineers() async {
-    final res = await http.get(_uri('/api/engineers/'), headers: AuthStore.authHeaders());
+    final res = await http.get(
+      _uri('/api/engineers/'),
+      headers: AuthStore.authHeaders(),
+    );
     if (res.statusCode != 200) {
       throw Exception('Failed to load engineers (${res.statusCode})');
     }
     final list = jsonDecode(res.body) as List<dynamic>;
-    return list.map((e) => EngineerProfile.fromApi(e as Map<String, dynamic>)).toList();
+    return list
+        .map((e) => EngineerProfile.fromApi(e as Map<String, dynamic>))
+        .toList();
   }
 
   static Future<List<Customer>> fetchCustomers() async {
-    final res = await http.get(_uri('/api/customers/'), headers: AuthStore.authHeaders());
+    final res = await http.get(
+      _uri('/api/customers/'),
+      headers: AuthStore.authHeaders(),
+    );
     if (res.statusCode != 200) {
       throw Exception('Failed to load customers (${res.statusCode})');
     }
     final list = jsonDecode(res.body) as List<dynamic>;
-    return list.map((e) => Customer.fromApi(e as Map<String, dynamic>)).toList();
+    return list
+        .map((e) => Customer.fromApi(e as Map<String, dynamic>))
+        .toList();
   }
 
   static Future<AppTicket> createTicket({
@@ -136,12 +152,24 @@ class ApiClient {
       'issue': issue,
       'model': model,
     };
-    if (issueNotes != null && issueNotes.isNotEmpty) body['issue_notes'] = issueNotes;
-    if (serialNumber != null && serialNumber.isNotEmpty) body['serial_number'] = serialNumber;
-    if (mfgDate != null && mfgDate.isNotEmpty) body['mfg_date'] = mfgDate;
-    if (purchaseDate != null && purchaseDate.isNotEmpty) body['purchase_date'] = purchaseDate;
-    if (newFanComplaint != null) body['new_fan_complaint'] = newFanComplaint;
-    if (repeatedComplaintCount != null) body['repeated_complaint_count'] = repeatedComplaintCount;
+    if (issueNotes != null && issueNotes.isNotEmpty) {
+      body['issue_notes'] = issueNotes;
+    }
+    if (serialNumber != null && serialNumber.isNotEmpty) {
+      body['serial_number'] = serialNumber;
+    }
+    if (mfgDate != null && mfgDate.isNotEmpty) {
+      body['mfg_date'] = mfgDate;
+    }
+    if (purchaseDate != null && purchaseDate.isNotEmpty) {
+      body['purchase_date'] = purchaseDate;
+    }
+    if (newFanComplaint != null) {
+      body['new_fan_complaint'] = newFanComplaint;
+    }
+    if (repeatedComplaintCount != null) {
+      body['repeated_complaint_count'] = repeatedComplaintCount;
+    }
     final res = await http.post(
       _uri('/api/tickets/'),
       headers: {'Content-Type': 'application/json', ...AuthStore.authHeaders()},
@@ -153,7 +181,10 @@ class ApiClient {
     return AppTicket.fromApi(jsonDecode(res.body) as Map<String, dynamic>);
   }
 
-  static Future<AppTicket> assignTicket({required int ticketId, required int engineerId}) async {
+  static Future<AppTicket> assignTicket({
+    required int ticketId,
+    required int engineerId,
+  }) async {
     final res = await http.patch(
       _uri('/api/tickets/$ticketId/'),
       headers: {'Content-Type': 'application/json', ...AuthStore.authHeaders()},
@@ -166,7 +197,10 @@ class ApiClient {
   }
 
   static Future<void> startTicket({required int ticketId}) async {
-    final res = await http.post(_uri('/api/tickets/$ticketId/start/'), headers: AuthStore.authHeaders());
+    final res = await http.post(
+      _uri('/api/tickets/$ticketId/start/'),
+      headers: AuthStore.authHeaders(),
+    );
     if (res.statusCode != 200) {
       String detail = '';
       try {
@@ -192,7 +226,10 @@ class ApiClient {
     XFile? beforeServicePhoto,
     XFile? afterServicePhoto,
   }) async {
-    final request = http.MultipartRequest('POST', _uri('/api/tickets/$ticketId/complete/'));
+    final request = http.MultipartRequest(
+      'POST',
+      _uri('/api/tickets/$ticketId/complete/'),
+    );
     request.headers.addAll(AuthStore.authHeaders());
     request.fields.addAll({
       'service_provider_code': AuthStore.username ?? '',
@@ -207,41 +244,59 @@ class ApiClient {
       'difficult_to_attend': difficultToAttend.toString(),
     });
     if (beforeServicePhoto != null) {
-      request.files.add(await _multipartFromXFile('before_service_photo', beforeServicePhoto));
-    } else {
-      request.files.add(_placeholderImage('before_service_photo'));
+      request.files.add(
+        await _multipartFromXFile('before_service_photo', beforeServicePhoto),
+      );
     }
     if (afterServicePhoto != null) {
-      request.files.add(await _multipartFromXFile('after_service_photo', afterServicePhoto));
-    } else {
-      request.files.add(_placeholderImage('after_service_photo'));
+      request.files.add(
+        await _multipartFromXFile('after_service_photo', afterServicePhoto),
+      );
     }
 
     final streamed = await request.send();
     final res = await http.Response.fromStream(streamed);
     if (res.statusCode != 201) {
-      throw Exception('Failed to complete ticket (${res.statusCode})');
+      String detail = '';
+      try {
+        final body = jsonDecode(res.body) as Map<String, dynamic>;
+        detail = body['detail']?.toString() ?? '';
+      } catch (_) {}
+      final suffix = detail.isEmpty ? '' : ': $detail';
+      throw Exception('Failed to complete ticket (${res.statusCode})$suffix');
     }
     return ReportData.fromApi(jsonDecode(res.body) as Map<String, dynamic>);
   }
 
-  static Future<List<ReportData>> fetchReports({String? date, String? dateFrom, String? dateTo, String? ticketId}) async {
+  static Future<List<ReportData>> fetchReports({
+    String? date,
+    String? dateFrom,
+    String? dateTo,
+    String? ticketId,
+  }) async {
     final params = <String, String>{};
     if (date != null && date.isNotEmpty) params['date'] = date;
     if (dateFrom != null && dateFrom.isNotEmpty) params['date_from'] = dateFrom;
     if (dateTo != null && dateTo.isNotEmpty) params['date_to'] = dateTo;
     if (ticketId != null && ticketId.isNotEmpty) params['ticket_id'] = ticketId;
-    final uri = params.isEmpty ? _uri('/api/reports/') : _uri('/api/reports/').replace(queryParameters: params);
+    final uri = params.isEmpty
+        ? _uri('/api/reports/')
+        : _uri('/api/reports/').replace(queryParameters: params);
     final res = await http.get(uri, headers: AuthStore.authHeaders());
     if (res.statusCode != 200) {
       throw Exception('Failed to load reports (${res.statusCode})');
     }
     final list = jsonDecode(res.body) as List<dynamic>;
-    return list.map((e) => ReportData.fromApi(e as Map<String, dynamic>)).toList();
+    return list
+        .map((e) => ReportData.fromApi(e as Map<String, dynamic>))
+        .toList();
   }
 
   static Future<Uint8List> fetchReportPdf(int reportId) async {
-    final res = await http.get(_uri('/api/reports/$reportId/pdf/'), headers: AuthStore.authHeaders());
+    final res = await http.get(
+      _uri('/api/reports/$reportId/pdf/'),
+      headers: AuthStore.authHeaders(),
+    );
     if (res.statusCode != 200) {
       throw Exception('Failed to download PDF (${res.statusCode})');
     }
@@ -268,7 +323,9 @@ class ApiClient {
     if (res.statusCode != 201) {
       throw Exception('Failed to create engineer (${res.statusCode})');
     }
-    return EngineerProfile.fromApi(jsonDecode(res.body) as Map<String, dynamic>);
+    return EngineerProfile.fromApi(
+      jsonDecode(res.body) as Map<String, dynamic>,
+    );
   }
 
   static Future<EngineerProfile> updateEngineer({
@@ -292,7 +349,9 @@ class ApiClient {
     if (res.statusCode != 200) {
       throw Exception('Failed to update engineer (${res.statusCode})');
     }
-    return EngineerProfile.fromApi(jsonDecode(res.body) as Map<String, dynamic>);
+    return EngineerProfile.fromApi(
+      jsonDecode(res.body) as Map<String, dynamic>,
+    );
   }
 
   static Future<Customer> createCustomer({
@@ -344,4 +403,3 @@ class ApiClient {
     return Customer.fromApi(jsonDecode(res.body) as Map<String, dynamic>);
   }
 }
-

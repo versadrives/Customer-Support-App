@@ -16,6 +16,7 @@ urlpatterns = [
     path("tickets/<int:ticket_id>/edit/", panel_views.panel_ticket_edit, name="panel_ticket_edit"),
     path("engineers/", panel_views.panel_engineers, name="panel_engineers"),
     path("engineers/new/", panel_views.panel_engineer_create, name="panel_engineer_create"),
+    path("engineers/<int:engineer_id>/reset-password/", panel_views.panel_engineer_password_reset, name="panel_engineer_password_reset"),
     path("replacements/", panel_views.panel_replacements, name="panel_replacements"),
     path("replacements/<int:ticket_id>/", panel_views.panel_replacement_edit, name="panel_replacement_edit"),
     path("replacements/<int:ticket_id>/invoice/", panel_views.panel_replacement_invoice, name="panel_replacement_invoice"),
