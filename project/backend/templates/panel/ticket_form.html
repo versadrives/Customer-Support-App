@@ -82,37 +82,60 @@
           {{ form.issue_notes }}
           {% if form.issue_notes.errors %}<div class="field-help" style="color:#b42318;">{{ form.issue_notes.errors|join:", " }}</div>{% endif %}
         </div>
-        <div>
-          <label>Product</label>
-          <div style="display:flex;gap:6px;align-items:center;">
-            {{ form.model_choice }}
-            <button type="button" id="remove-product-btn" class="btn" title="Delete selected product" style="padding:8px 10px;flex-shrink:0;background:#fee2e2;color:#991b1b;border-color:#fecaca;">
+        <div style="grid-column:1/4;">
+          <label>Products</label>
+          <div style="overflow:auto;border:1px solid var(--border);border-radius:8px;">
+            <table class="table" style="margin:0;width:100%;table-layout:fixed;">
+              <thead>
+                <tr>
+                  <th style="width:45%;">Product</th>
+                  <th style="width:100px;">Qty</th>
+                  <th style="width:180px;">Serial</th>
+                  <th style="width:52px;"></th>
+                </tr>
+              </thead>
+              <tbody id="product-rows">
+                {% for row in posted_product_rows %}
+                  <tr class="product-row">
+                    <td>
+                      <select name="product_item" class="product-select" style="width:100%;min-width:0;">
+                        <option value="">Select product</option>
+                        {% for option in product_options %}
+                          <option value="{{ option.name }}" {% if row.item == option.name %}selected{% endif %}>{{ option.name }}</option>
+                        {% endfor %}
+                      </select>
+                    </td>
+                    <td>
+                      <input type="number" name="product_quantity" min="1" value="{{ row.quantity|default:'1' }}" style="width:100%;max-width:100px;">
+                    </td>
+                    <td class="product-serial-cell">
+                      <input type="text" name="product_serial_number" value="{{ row.serial_number|default:'' }}" placeholder="Serial number (optional)" style="width:100%;max-width:180px;">
+                    </td>
+                    <td>
+                      <button type="button" class="btn remove-product-row" title="Remove product row" style="padding:8px 10px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
+                      </button>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;">
+            <button type="button" id="add-product-row-btn" class="btn">Add Product Row</button>
+            <button type="button" id="show-new-product-btn" class="btn">Add New Product</button>
+            <button type="button" id="remove-product-btn" class="btn" title="Delete selected product from master list" style="padding:8px 10px;background:#fee2e2;color:#991b1b;border-color:#fecaca;">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
             </button>
           </div>
           <div id="new-product-wrap" style="display:none;margin-top:8px;gap:6px;align-items:center;">
             <input type="text" id="new-product-name" placeholder="Enter new product name" style="flex:1;">
             <button type="button" id="add-product-btn" class="btn primary" style="flex-shrink:0;">Add</button>
-            <button type="button" id="cancel-product-btn" class="btn" style="flex-shrink:0;">✕</button>
+            <button type="button" id="cancel-product-btn" class="btn" style="flex-shrink:0;">Cancel</button>
           </div>
-          {% if form.model_choice.errors %}<div class="field-help" style="color:#b42318;">{{ form.model_choice.errors|join:", " }}</div>{% endif %}
-          {% if form.model_custom.errors %}<div class="field-help" style="color:#b42318;">{{ form.model_custom.errors|join:", " }}</div>{% endif %}
         </div>
-        <div>
-          <label>Serial Number</label>
-          {{ form.serial_number }}
-          {% if form.serial_number.errors %}<div class="field-help" style="color:#b42318;">{{ form.serial_number.errors|join:", " }}</div>{% endif %}
-        </div>
-        <div>
-          <label>MFG Date</label>
-          {{ form.mfg_date }}
-          {% if form.mfg_date.errors %}<div class="field-help" style="color:#b42318;">{{ form.mfg_date.errors|join:", " }}</div>{% endif %}
-        </div>
-        <div>
-          <label>Assigned Engineer</label>
-          {{ form.assigned_engineer }}
-          {% if form.assigned_engineer.errors %}<div class="field-help" style="color:#b42318;">{{ form.assigned_engineer.errors|join:", " }}</div>{% endif %}
-        </div>
+        {% if form.model_choice.errors %}<div class="field-help" style="color:#b42318;">{{ form.model_choice.errors|join:", " }}</div>{% endif %}
+        {% if form.model_custom.errors %}<div class="field-help" style="color:#b42318;">{{ form.model_custom.errors|join:", " }}</div>{% endif %}
       </div>
       <div style="margin-top:16px;display:flex;gap:10px;">
         <button class="btn primary" type="submit">Create Ticket</button>
@@ -133,6 +156,9 @@
       var cancelIssueBtn = document.getElementById("cancel-issue-btn");
       var removeIssueBtn = document.getElementById("remove-issue-btn");
       var productSelect = document.getElementById("id_model_choice");
+      var productRows = document.getElementById("product-rows");
+      var addProductRowBtn = document.getElementById("add-product-row-btn");
+      var showNewProductBtn = document.getElementById("show-new-product-btn");
       var newProductWrap = document.getElementById("new-product-wrap");
       var newProductName = document.getElementById("new-product-name");
       var addProductBtn = document.getElementById("add-product-btn");
@@ -159,6 +185,59 @@
         newProductWrap.style.display = "none";
         newProductName.value = "";
       }
+      function getProductSelects() {
+        return Array.prototype.slice.call(document.querySelectorAll(".product-select"));
+      }
+      function getCurrentProductSelect() {
+        if (document.activeElement && document.activeElement.classList && document.activeElement.classList.contains("product-select")) {
+          return document.activeElement;
+        }
+        return getProductSelects()[0] || null;
+      }
+      function addOptionToProductSelects(name, selectedSelect) {
+        getProductSelects().forEach(function (select) {
+          if (!select.querySelector("option[value='" + CSS.escape(name) + "']")) {
+            select.add(new Option(name, name));
+          }
+        });
+        if (selectedSelect) {
+          selectedSelect.value = name;
+        }
+      }
+      function removeOptionFromProductSelects(name) {
+        getProductSelects().forEach(function (select) {
+          var option = select.querySelector("option[value='" + CSS.escape(name) + "']");
+          if (option) { option.remove(); }
+          if (select.value === name) { select.value = ""; }
+        });
+      }
+      function bindProductRow(row) {
+        var select = row.querySelector(".product-select");
+        if (select) {
+          select.addEventListener("focus", function () { productSelect = select; });
+        }
+        var removeBtn = row.querySelector(".remove-product-row");
+        if (!removeBtn) return;
+        removeBtn.addEventListener("click", function () {
+          if (productRows.querySelectorAll(".product-row").length <= 1) {
+            row.querySelector(".product-select").value = "";
+            row.querySelector("input[name='product_quantity']").value = "1";
+            return;
+          }
+          row.remove();
+        });
+      }
+      function addProductRow() {
+        var firstRow = productRows ? productRows.querySelector(".product-row") : null;
+        if (!firstRow) return;
+        var row = firstRow.cloneNode(true);
+        row.querySelector(".product-select").value = "";
+        row.querySelector("input[name='product_quantity']").value = "1";
+        row.querySelector("input[name='product_serial_number']").value = "";
+        productRows.appendChild(row);
+        bindProductRow(row);
+        row.querySelector(".product-select").focus();
+      }
       function syncAssignmentAvailability() {
         if (!serviceTypeSelect || !engineerSelect) return;
         var isReplacement = serviceTypeSelect.value === "REPLACEMENT";
@@ -180,9 +259,21 @@
           if (productSelect.value === "__other__") { showNewProductInput(); } else { hideNewProductInput(); }
         });
       }
+      if (productRows) {
+        getProductSelects().forEach(function (select) {
+          select.addEventListener("focus", function () { productSelect = select; });
+        });
+        productRows.querySelectorAll(".product-row").forEach(bindProductRow);
+      }
+      if (addProductRowBtn) {
+        addProductRowBtn.addEventListener("click", addProductRow);
+      }
+      if (showNewProductBtn) {
+        showNewProductBtn.addEventListener("click", showNewProductInput);
+      }
       cancelIssueBtn.addEventListener("click", function () { issueSelect.value = ""; hideNewIssueInput(); });
       if (cancelProductBtn) {
-        cancelProductBtn.addEventListener("click", function () { productSelect.value = ""; hideNewProductInput(); });
+        cancelProductBtn.addEventListener("click", function () { hideNewProductInput(); });
       }
 
       addIssueBtn.addEventListener("click", function () {
@@ -238,10 +329,7 @@
             body: "name=" + encodeURIComponent(name),
           }).then(function (r) { return r.json(); })
             .then(function (data) {
-              var otherOption = productSelect.querySelector("option[value='__other__']");
-              var option = new Option(data.name, data.name, true, true);
-              if (otherOption) { productSelect.insertBefore(option, otherOption); } else { productSelect.add(option); }
-              productSelect.value = data.name;
+              addOptionToProductSelects(data.name, getCurrentProductSelect());
               hideNewProductInput();
             }).catch(function () { alert("Failed to add product."); })
             .finally(function () { btn.disabled = false; btn.textContent = "Add"; });
@@ -250,8 +338,10 @@
 
       if (removeProductBtn) {
         removeProductBtn.addEventListener("click", function () {
-          var selected = productSelect.options[productSelect.selectedIndex];
-          if (!selected || !selected.value || selected.value === "__other__") return;
+          var activeProductSelect = getCurrentProductSelect();
+          if (!activeProductSelect) return;
+          var selected = activeProductSelect.options[activeProductSelect.selectedIndex];
+          if (!selected || !selected.value) return;
           var name = selected.value;
           if (!confirm('Delete product "' + name + '"?')) return;
           var btn = removeProductBtn;
@@ -261,7 +351,7 @@
             headers: { "Content-Type": "application/x-www-form-urlencoded", "X-CSRFToken": csrfTokenInput ? csrfTokenInput.value : "" },
             body: "name=" + encodeURIComponent(name),
           }).then(function (r) { return r.json(); })
-            .then(function () { selected.remove(); productSelect.value = ""; })
+            .then(function () { removeOptionFromProductSelects(name); })
             .catch(function () { alert("Failed to delete product."); })
             .finally(function () { btn.disabled = false; });
         });
@@ -275,6 +365,40 @@
         newFanComplaintSelect.addEventListener("change", syncRepeatedComplaintAvailability);
         syncRepeatedComplaintAvailability();
       }
+      function bindSerialVisibility(row) {
+        // no-op for create ticket: row-level serial inputs are always visible
+      }
+      if (productRows) {
+        productRows.querySelectorAll(".product-row").forEach(function (row) {
+          bindProductRow(row);
+        });
+      }
+      if (addProductRowBtn) {
+        addProductRowBtn.addEventListener("click", addProductRow);
+      }
+      if (removeProductBtn) {
+        removeProductBtn.addEventListener("click", function () {
+          var activeProductSelect = getCurrentProductSelect();
+          if (!activeProductSelect) return;
+          var selected = activeProductSelect.options[activeProductSelect.selectedIndex];
+          if (!selected || !selected.value) return;
+          var name = selected.value;
+          if (!confirm('Delete product "' + name + '"?')) return;
+          var btn = removeProductBtn;
+          btn.disabled = true;
+          fetch("/panel/tickets/items/remove/", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded", "X-CSRFToken": csrfTokenInput ? csrfTokenInput.value : "" },
+            body: "name=" + encodeURIComponent(name),
+          }).then(function (r) { return r.json(); })
+            .then(function () {
+              removeOptionFromProductSelects(name);
+            })
+            .catch(function () { alert("Failed to delete product."); })
+            .finally(function () { btn.disabled = false; });
+        });
+      }
+      if (productRows) { productRows.querySelectorAll(".product-row").forEach(function (row) { bindProductRow(row); }); }
       if (productSelect && productSelect.value === "__other__") { showNewProductInput(); }
     })();
   </script>

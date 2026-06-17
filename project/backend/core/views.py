@@ -172,6 +172,23 @@ class TicketViewSet(viewsets.ModelViewSet):
         except (ValueError, TypeError, InvalidOperation, AttributeError):
             return Response({'detail': 'Invalid values.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Update ticket product serial numbers if provided in request
+        product_item_ids = request.data.getlist('product_item_id') if hasattr(request.data, 'getlist') else request.data.get('product_item_id', [])
+        product_serial_numbers = request.data.getlist('product_serial_number') if hasattr(request.data, 'getlist') else request.data.get('product_serial_number', [])
+        if product_item_ids and product_serial_numbers:
+            # Update serial numbers for each product
+            for index, product_id in enumerate(product_item_ids):
+                if index < len(product_serial_numbers):
+                    try:
+                        product_id = int(product_id)
+                        serial_number = product_serial_numbers[index].strip()
+                        ticket_product = ticket.product_rows.filter(item_id=product_id).first()
+                        if ticket_product and ticket_product.serial_number != serial_number:
+                            ticket_product.serial_number = serial_number
+                            ticket_product.save(update_fields=['serial_number'])
+                    except (ValueError, TicketProduct.DoesNotExist):
+                        pass  # Ignore invalid product IDs
+
         try:
             report = Report.objects.create(
                 ticket=ticket,
@@ -261,8 +278,9 @@ class ReportViewSet(viewsets.ModelViewSet):
         p.drawString(40, y, f"Service Report - {report.ticket.ticket_id}")
         y -= 24
         p.setFont('Helvetica', 11)
+        engineer_name = report.engineer.display_name if report.engineer else '-'
         lines = [
-            f"Engineer: {report.engineer.display_name}",
+            f"Engineer: {engineer_name}",
             f"Customer: {report.ticket.customer.name}",
             f"Location: {report.ticket.location}",
             f"Status: {report.ticket.status}",

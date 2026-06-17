@@ -34,29 +34,92 @@
       <div class="card" style="box-shadow:none;border:1px dashed var(--border);">
         <div style="font-weight:600;margin-bottom:8px;">Equipment</div>
         <div>Model: {{ ticket.model|capfirst }}</div>
-        <div>Serial: {{ ticket.serial_number|capfirst }}</div>
         <div class="muted">MFG Date: {{ ticket.mfg_date }}</div>
         <div class="muted">Purchase Date: {{ ticket.purchase_date|date:"Y-m-d"|default:"-" }}</div>
       </div>
+
     </div>
     <form method="post" style="margin-top:12px;">
       {% csrf_token %}
       <div class="card" style="box-shadow:none;border:1px dashed var(--border);">
-        <div style="font-weight:600;margin-bottom:10px;">Assignment</div>
+        <div style="font-weight:600;margin-bottom:10px;">Editable Fields</div>
         <div class="grid cols-3">
           <div>
-            <label>Service Type</label>
-            {{ form.service_type }}
-            {% if form.service_type.errors %}
-              <div class="field-help" style="color:#b42318;">{{ form.service_type.errors|join:", " }}</div>
-            {% endif %}
+            <label>Status</label>
+            {{ form.status }}
+            {% if form.status.errors %}<div class="field-help" style="color:#b42318;">{{ form.status.errors|join:", " }}</div>{% endif %}
           </div>
           <div>
             <label>Assigned Engineer</label>
             {{ form.assigned_engineer }}
-            {% if form.assigned_engineer.errors %}
-              <div class="field-help" style="color:#b42318;">{{ form.assigned_engineer.errors|join:", " }}</div>
-            {% endif %}
+            {% if form.assigned_engineer.errors %}<div class="field-help" style="color:#b42318;>{{ form.assigned_engineer.errors|join:", " }}</div>{% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="card" id="completion-report-section" style="box-shadow:none;border:1px dashed var(--border);margin-top:12px;display:none;">
+        <div style="font-weight:600;margin-bottom:10px;">Completion Report</div>
+        <div class="grid cols-3">
+          {% if ticket.product_rows.count > 0 %}
+          <div style="grid-column:1/4; margin-bottom:12px;">
+            <div style="font-weight:600;margin-bottom:8px;">Product Serial Numbers</div>
+            <div class="grid cols-3">
+              {% for product in ticket.product_rows.all %}
+              <div>
+                <label>{{ product.item.name|capfirst }}</label>
+                <input type="text" name="product_serial_number" value="{{ product.serial_number }}" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:4px;">
+                <input type="hidden" name="product_item_id" value="{{ product.item.id }}">
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% else %}
+          <div style="margin-bottom:12px;">
+            <label>Serial Number</label>
+            {{ form.serial_number }}
+            {% if form.serial_number.errors %}<div class="field-help" style="color:#b42318;">{{ form.serial_number.errors|join:", " }}</div>{% endif %}
+          </div>
+          {% endif %}
+          <div style="grid-column:1/4;">
+            <label>Problem Identified</label>
+            {{ form.report_problem_identified }}
+            {% if form.report_problem_identified.errors %}<div class="field-help" style="color:#b42318;>{{ form.report_problem_identified.errors|join:", " }}</div>{% endif %}
+          </div>
+          <div style="grid-column:1/4;">
+            <label>Action Taken</label>
+            {{ form.report_action_taken }}
+            {% if form.report_action_taken.errors %}<div class="field-help" style="color:#b42318;>{{ form.report_action_taken.errors|join:", " }}</div>{% endif %}
+          </div>
+          <div>
+            <label>PCB Board Number</label>
+            {{ form.report_pcb_board_number }}
+            {% if form.report_pcb_board_number.errors %}<div class="field-help" style="color:#b42318;>{{ form.report_pcb_board_number.errors|join:", " }}</div>{% endif %}
+          </div>
+          <div>
+            <label>Charges Collected</label>
+            {{ form.report_charges_collected }}
+            {% if form.report_charges_collected.errors %}<div class="field-help" style="color:#b42318;>{{ form.report_charges_collected.errors|join:", " }}</div>{% endif %}
+          </div>
+          <div>
+            <label>KM's Driven</label>
+            {{ form.report_kms_driven }}
+            {% if form.report_kms_driven.errors %}<div class="field-help" style="color:#b42318;>{{ form.report_kms_driven.errors|join:", " }}</div>{% endif %}
+          </div>
+          <div style="grid-column:1/4;">
+            <label>Comments</label>
+            {{ form.report_comments }}
+            {% if form.report_comments.errors %}<div class="field-help" style="color:#b42318;>{{ form.report_comments.errors|join:", " }}</div>{% endif %}
+          </div>
+          <div>
+            <label style="display:flex;align-items:center;gap:8px;">
+              {{ form.report_is_customer_polite }}
+              <span>Customer Polite</span>
+            </label>
+          </div>
+          <div>
+            <label style="display:flex;align-items:center;gap:8px;">
+              {{ form.report_difficult_to_attend }}
+              <span>Difficult To Attend</span>
+            </label>
           </div>
         </div>
       </div>
@@ -66,22 +129,122 @@
       </div>
     </form>
   </div>
+
+  <!-- Custom Confirmation Modal -->
+  <div id="status-change-modal" class="modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000;justify-content:center;align-items:center;">
+    <div class="modal-content" style="background:white;padding:20px;border-radius:8px;width:90%;max-width:400px;text-align:center;">
+      <h3>Confirm Status Change</h3>
+      <p id="modal-message">Are you sure you want to change the ticket status?</p>
+      <div style="margin-top:20px;">
+        <button id="modal-cancel" class="btn" style="margin-right:10px;">Cancel</button>
+        <button id="modal-confirm" class="btn primary">OK</button>
+      </div>
+    </div>
+  </div>
   <script>
     (function () {
       var serviceTypeSelect = document.getElementById("id_service_type");
       var engineerSelect = document.getElementById("id_assigned_engineer");
-      if (!serviceTypeSelect || !engineerSelect) return;
+      var statusSelect = document.getElementById("id_status");
+      var reportSection = document.getElementById("completion-report-section");
+      var form = statusSelect ? statusSelect.form : null;
+      var initialStatus = statusSelect ? statusSelect.value : "";
+      var previousStatus = initialStatus;
+      var ticketServiceType = "{{ ticket.service_type|default:'' }}";
+      var hasServiceTypeSelect = !!serviceTypeSelect;
+
+      // Modal elements
+      var modal = document.getElementById('status-change-modal');
+      var modalMessage = document.getElementById('modal-message');
+      var modalCancel = document.getElementById('modal-cancel');
+      var modalConfirm = document.getElementById('modal-confirm');
+
+      // Flag to track if we're waiting for modal response
+      var awaitingModalResponse = false;
+      var submitEvent = null;
+
+      function getServiceType() {
+        return hasServiceTypeSelect ? serviceTypeSelect.value : ticketServiceType;
+      }
 
       function syncAssignmentAvailability() {
-        var isReplacement = serviceTypeSelect.value === "REPLACEMENT";
+        if (!engineerSelect) return;
+        var isReplacement = getServiceType() === "REPLACEMENT";
         engineerSelect.disabled = isReplacement;
         if (isReplacement) {
           engineerSelect.value = "";
         }
       }
+      function syncStatusAvailability() {
+        if (!statusSelect) return;
+        var requiresEngineer = statusSelect.value === "ASSIGNED" || statusSelect.value === "IN_PROGRESS";
+        if (requiresEngineer && getServiceType() === "REPLACEMENT") {
+          statusSelect.value = "OPEN";
+        }
+      }
+      function syncReportVisibility() {
+        if (!statusSelect || !reportSection) return;
+        var showReport = statusSelect.value === "COMPLETED" && previousStatus !== "COMPLETED" && getServiceType() !== "REPLACEMENT";
+        reportSection.style.display = showReport ? "" : "none";
+      }
 
-      serviceTypeSelect.addEventListener("change", syncAssignmentAvailability);
+      function showConfirmationModal(newStatus) {
+        var selectedLabel = statusSelect.options[statusSelect.selectedIndex].text;
+        modalMessage.textContent = "Change ticket status to " + selectedLabel + "?";
+        modal.style.display = "flex";
+        awaitingModalResponse = true;
+      }
+
+      function hideConfirmationModal() {
+        modal.style.display = "none";
+        awaitingModalResponse = false;
+      }
+
+      if (hasServiceTypeSelect) {
+        serviceTypeSelect.addEventListener("change", syncAssignmentAvailability);
+        serviceTypeSelect.addEventListener("change", syncStatusAvailability);
+        serviceTypeSelect.addEventListener("change", syncReportVisibility);
+      }
+      if (statusSelect) {
+        statusSelect.addEventListener("change", function () {
+          syncStatusAvailability();
+          syncReportVisibility();
+          previousStatus = statusSelect.value;
+        });
+      }
+      if (form && statusSelect) {
+        form.addEventListener("submit", function (event) {
+          if (statusSelect.value !== initialStatus) {
+            event.preventDefault(); // Always prevent initially
+            submitEvent = event; // Store the event for later
+            showConfirmationModal(statusSelect.value);
+          }
+        });
+      }
+
+      // Modal button handlers
+      modalCancel.addEventListener("click", function () {
+        hideConfirmationModal();
+      });
+
+      modalConfirm.addEventListener("click", function () {
+        hideConfirmationModal();
+        if (submitEvent) {
+          form.submit(); // Submit the form normally
+          submitEvent = null;
+        }
+      });
+
+      // Close modal when clicking outside
+      window.addEventListener('click', function(event) {
+        if (event.target === modal) {
+          hideConfirmationModal();
+        }
+      });
+
       syncAssignmentAvailability();
+      syncStatusAvailability();
+      syncReportVisibility();
     })();
   </script>
 {% endblock %}

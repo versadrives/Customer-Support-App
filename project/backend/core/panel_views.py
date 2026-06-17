@@ -13,6 +13,7 @@ def _escape_like_wildcards(value):
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.conf import settings
@@ -27,8 +28,8 @@ from urllib.parse import urlencode
 
 from django.core.paginator import Paginator
 from django.db.models import Q
-from .models import AdminProfile, Customer, EngineerProfile, IssueOption, Item, Replacement, ReplacementStatus, Report, SavedView, SavedViewPageType, Ticket, TicketServiceType, TicketStatus
-from .panel_forms import PanelEngineerForm, PanelLoginForm, PanelReplacementForm, PanelTicketForm, PanelTicketStatusForm
+from .models import AdminProfile, Customer, EngineerProfile, IssueOption, Item, Replacement, ReplacementStatus, Report, SavedView, SavedViewPageType, Ticket, TicketProduct, TicketServiceType, TicketStatus
+from .panel_forms import PanelEngineerForm, PanelLoginForm, PanelReplacementForm, PanelTicketForm, PanelTicketStatusForm, parse_ticket_product_rows, save_ticket_product_rows
 from .replacement_pdf import build_replacement_invoice_response
 
 
@@ -146,6 +147,23 @@ def _display_bool(value):
     return "Yes" if value else "No"
 
 
+def _display_user(user):
+    if not user:
+        return ""
+    full_name = user.get_full_name().strip()
+    return full_name or user.username
+
+
+def _format_ticket_serial_numbers(ticket):
+    serials = []
+    for product in ticket.product_rows.order_by("sort_order", "id").select_related("item"):
+        serial = (product.serial_number or "").strip()
+        if not serial:
+            continue
+        serials.append(f"{product.item.name}: {serial}")
+    return "; ".join(serials) or ticket.serial_number
+
+
 def _normalize_columns(page_type, columns):
     config = LIST_PAGE_CONFIG[page_type]
     allowed = {column_id for column_id, _ in config["column_choices"]}
@@ -192,6 +210,134 @@ def _build_lists_url(page_type, view_id="", mode=""):
     return f"{reverse('panel:panel_lists')}?{urlencode(params)}"
 
 
+def _write_ticket_csv(tickets):
+    response = HttpResponse(content_type="text/csv")
+    response["Content-Disposition"] = 'attachment; filename="tickets.csv"'
+    writer = csv.writer(response)
+    writer.writerow([
+        "Ticket ID",
+        "Customer",
+        "Contact Phone",
+        "Location",
+        "Service Type",
+        "Status",
+        "Assigned Engineer",
+        "Issue",
+        "Issue Notes",
+        "Product",
+        "Serial Number",
+        "MFG Date",
+        "Purchase Date",
+        "New Fan Complaint",
+        "Repeated Complaint Count",
+        "Created By",
+        "Created At",
+        "Assigned At",
+        "Started At",
+        "Completed At",
+    ])
+    for ticket in tickets:
+        writer.writerow([
+            ticket.ticket_id,
+            ticket.customer.name if ticket.customer else "",
+            ticket.customer.contact_phone if ticket.customer else "",
+            ticket.location,
+            ticket.get_service_type_display(),
+            ticket.get_status_display(),
+            ticket.assigned_engineer.display_name if ticket.assigned_engineer else "",
+            ticket.issue,
+            ticket.issue_notes,
+            ticket.model,
+            _format_ticket_serial_numbers(ticket),
+            _display_datetime(ticket.mfg_date),
+            _display_datetime(ticket.purchase_date),
+            _display_bool(ticket.new_fan_complaint),
+            ticket.repeated_complaint_count or "",
+            _display_user(ticket.created_by),
+            _display_datetime(ticket.created_at),
+            _display_datetime(ticket.assigned_at),
+            _display_datetime(ticket.started_at),
+            _display_datetime(ticket.completed_at),
+        ])
+    return response
+
+
+def _write_replacement_csv(tickets):
+    response = HttpResponse(content_type="text/csv")
+    response["Content-Disposition"] = 'attachment; filename="replacements.csv"'
+    writer = csv.writer(response)
+    writer.writerow([
+        "Ticket ID",
+        "Customer",
+        "Contact Phone",
+        "Location",
+        "Ticket Status",
+        "Replacement Status",
+        "Issue",
+        "Issue Notes",
+        "Product",
+        "Product Serial Numbers",
+        "Purchase Date",
+        "Challan",
+        "Items",
+        "Total Quantity",
+        "Subject",
+        "Reference Number",
+        "Reference Date",
+        "Client Reference Number",
+        "Client Reference Date",
+        "Organization",
+        "Contact Name",
+        "Replacement Contact Phone",
+        "Billing Address",
+        "Billing City",
+        "Billing State",
+        "Billing Country",
+        "Billing Postal Code",
+        "Created By",
+        "Ticket Created At",
+        "Replacement Updated At",
+    ])
+    for ticket in tickets:
+        try:
+            replacement = ticket.replacement
+        except Replacement.DoesNotExist:
+            replacement = None
+        writer.writerow([
+            ticket.ticket_id,
+            ticket.customer.name if ticket.customer else "",
+            ticket.customer.contact_phone if ticket.customer else "",
+            ticket.location,
+            ticket.get_status_display(),
+            replacement.get_status_display() if replacement else ReplacementStatus.DRAFT.label,
+            ticket.issue,
+            ticket.issue_notes,
+            ticket.model,
+            _format_ticket_serial_numbers(ticket),
+            _display_datetime(ticket.purchase_date),
+            replacement.custom_challan_number if replacement else "",
+            replacement.items_summary if replacement else ticket.model,
+            replacement.total_quantity if replacement else "",
+            replacement.subject if replacement else "",
+            replacement.ref_number if replacement else "",
+            _display_datetime(replacement.ref_date) if replacement else "",
+            replacement.client_ref_number if replacement else "",
+            _display_datetime(replacement.client_ref_date) if replacement else "",
+            replacement.organization_name if replacement else "",
+            replacement.contact_name if replacement else "",
+            replacement.contact_phone if replacement else "",
+            replacement.billing_address if replacement else "",
+            replacement.billing_city if replacement else "",
+            replacement.billing_state if replacement else "",
+            replacement.billing_country if replacement else "",
+            replacement.billing_postal_code if replacement else "",
+            _display_user(replacement.created_by) if replacement else "",
+            _display_datetime(ticket.created_at),
+            _display_datetime(replacement.updated_at) if replacement else "",
+        ])
+    return response
+
+
 def _build_report_rows(service_reports, replacements):
     rows = []
 
@@ -223,7 +369,7 @@ def _build_report_rows(service_reports, replacements):
                     report.ticket.repeated_complaint_count or "",
                     _display_datetime(report.created_at),
                     report.service_provider_code,
-                    report.serial_number,
+                    _format_ticket_serial_numbers(report.ticket),
                     report.problem_identified,
                     report.ticket.issue_notes,
                     report.action_taken,
@@ -268,7 +414,7 @@ def _build_report_rows(service_reports, replacements):
                     ticket.repeated_complaint_count or "",
                     _display_datetime(replacement.updated_at),
                     replacement.custom_challan_number or ticket.ticket_id or "",
-                    ticket.serial_number,
+                    _format_ticket_serial_numbers(ticket),
                     ticket.issue,
                     ticket.issue_notes,
                     replacement.items_summary,
@@ -580,6 +726,9 @@ def panel_tickets(request):
 
     filters_applied = any([service_type, status, engineer_id, customer_id, search, date_from, date_to])
     tickets = tickets.order_by("-created_at")
+    if request.GET.get("export") == "csv" and filters_applied:
+        return _write_ticket_csv(tickets)
+
     page_obj = None
     page_query = ""
     if filters_applied:
@@ -638,10 +787,34 @@ def panel_tickets(request):
 def panel_ticket_edit(request, ticket_id):
     if not request.user.is_staff:
         return redirect("panel:panel_login")
-    ticket = Ticket.objects.select_related("customer", "created_by", "assigned_engineer").get(id=ticket_id)
+    ticket = get_object_or_404(Ticket.objects.select_related("customer", "created_by", "assigned_engineer"), id=ticket_id)
     form = PanelTicketStatusForm(request.POST or None, instance=ticket)
     if request.method == "POST" and form.is_valid():
-        form.save()
+        # Update ticket product serial numbers if provided in request
+        product_item_ids = request.POST.getlist('product_item_id')
+        product_serial_numbers = request.POST.getlist('product_serial_number')
+        if product_item_ids and product_serial_numbers:
+            # Update serial numbers for each product
+            for index, product_id in enumerate(product_item_ids):
+                if index < len(product_serial_numbers):
+                    try:
+                        product_id = int(product_id)
+                        serial_number = product_serial_numbers[index].strip()
+                        ticket_product = ticket.product_rows.filter(item_id=product_id).first()
+                        if ticket_product and ticket_product.serial_number != serial_number:
+                            ticket_product.serial_number = serial_number
+                            ticket_product.save(update_fields=['serial_number'])
+                    except (ValueError, TicketProduct.DoesNotExist):
+                        pass  # Ignore invalid product IDs
+        elif ticket.product_rows.count() == 1:
+            serial_number = (form.cleaned_data.get('serial_number') or '').strip()
+            ticket_product = ticket.product_rows.first()
+            if ticket_product and serial_number and ticket_product.serial_number != serial_number:
+                ticket_product.serial_number = serial_number
+                ticket_product.save(update_fields=['serial_number'])
+
+        ticket = form.save()
+        _sync_ticket_status_from_panel(ticket, request.user, form.cleaned_data)
         return redirect("panel:panel_tickets")
     return render(
         request,
@@ -650,18 +823,106 @@ def panel_ticket_edit(request, ticket_id):
     )
 
 
+def _sync_ticket_status_from_panel(ticket, user, cleaned_data):
+    terminal_report_statuses = (
+        TicketStatus.COMPLETED,
+        TicketStatus.CANCELLED,
+        TicketStatus.DUPLICATE,
+        TicketStatus.CUSTOMER_SOLVED,
+    )
+
+    should_write_service_report = (
+        ticket.status in terminal_report_statuses
+        and not (
+            ticket.status == TicketStatus.COMPLETED
+            and ticket.service_type == TicketServiceType.REPLACEMENT
+        )
+    )
+
+    if should_write_service_report:
+        status_label = ticket.get_status_display()
+        is_completed = ticket.status == TicketStatus.COMPLETED
+        report_defaults = {
+            "engineer": ticket.assigned_engineer,
+            "service_provider_code": (
+                ticket.assigned_engineer.user.username
+                if ticket.assigned_engineer
+                else getattr(user, "username", "")
+            ),
+            "serial_number": _format_ticket_serial_numbers(ticket),
+            "problem_identified": (
+                cleaned_data.get("report_problem_identified", "").strip()
+                if is_completed
+                else status_label
+            ),
+            "action_taken": (
+                cleaned_data.get("report_action_taken", "").strip()
+                if is_completed
+                else status_label
+            ),
+            "pcb_board_number": cleaned_data.get("report_pcb_board_number", "").strip() if is_completed else "",
+            "comments": cleaned_data.get("report_comments", "").strip() if is_completed else "",
+            "charges_collected": cleaned_data.get("report_charges_collected") or 0,
+            "kms_driven": cleaned_data.get("report_kms_driven") or 0,
+            "is_customer_polite": bool(cleaned_data.get("report_is_customer_polite")) if is_completed else False,
+            "difficult_to_attend": bool(cleaned_data.get("report_difficult_to_attend")) if is_completed else False,
+        }
+        Report.objects.update_or_create(ticket=ticket, defaults=report_defaults)
+
+    if ticket.status == TicketStatus.COMPLETED and ticket.service_type == TicketServiceType.REPLACEMENT:
+        try:
+            replacement = ticket.replacement
+        except Replacement.DoesNotExist:
+            replacement = None
+        if replacement and replacement.status != ReplacementStatus.COMPLETED:
+            replacement.status = ReplacementStatus.COMPLETED
+            replacement.save(update_fields=["status", "updated_at"])
+
+
 @login_required(login_url="/panel/login/")
 def panel_ticket_create(request):
     if not request.user.is_staff:
         return redirect("panel:panel_login")
     form = PanelTicketForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        ticket = form.save(commit=False)
-        if request.user.is_authenticated and not ticket.created_by_id:
-            ticket.created_by = request.user
-        ticket.save()
-        return redirect("panel:panel_tickets")
-    return render(request, "panel/ticket_form.html", {"form": form, "page_title": "Create Ticket"})
+    product_rows = []
+    if request.method == "POST":
+        try:
+            product_rows = parse_ticket_product_rows(request.POST)
+        except ValidationError as exc:
+            form.add_error(None, exc)
+        if form.is_valid() and not form.non_field_errors():
+            ticket = form.save(commit=False)
+            if request.user.is_authenticated and not ticket.created_by_id:
+                ticket.created_by = request.user
+            ticket.save()
+            save_ticket_product_rows(ticket, product_rows)
+            return redirect("panel:panel_tickets")
+    product_options = Item.objects.filter(active=True).order_by("name")
+    posted_product_rows = []
+    if request.method == "POST":
+        product_names = request.POST.getlist("product_item")
+        quantities = request.POST.getlist("product_quantity")
+        serial_numbers = request.POST.getlist("product_serial_number")
+        posted_product_rows = [
+            {
+                "item": product_names[index] if index < len(product_names) else "",
+                "quantity": quantities[index] if index < len(quantities) else "1",
+                "serial_number": serial_numbers[index] if index < len(serial_numbers) else "",
+            }
+            for index in range(max(len(product_names), len(quantities), len(serial_numbers)))
+        ]
+    if not posted_product_rows:
+        posted_product_rows = [{"item": "", "quantity": "1"}]
+    return render(
+        request,
+        "panel/ticket_form.html",
+        {
+            "form": form,
+            "page_title": "Create Ticket",
+            "product_options": product_options,
+            "posted_product_rows": posted_product_rows,
+        },
+    )
 
 
 @login_required(login_url="/panel/login/")
@@ -783,6 +1044,12 @@ def panel_replacements(request):
     if not request.user.is_staff:
         return redirect("panel:panel_login")
 
+    today = timezone.localdate()
+    today_replacements_count = Ticket.objects.filter(
+        service_type=TicketServiceType.REPLACEMENT,
+        created_at__date=today,
+    ).count()
+
     def _get_replacement(ticket):
         try:
             return ticket.replacement
@@ -843,12 +1110,16 @@ def panel_replacements(request):
         if parsed:
             tickets = tickets.filter(created_at__date__lte=parsed)
     if not any([status, search, date_from, date_to]):
-        today = timezone.localdate()
         tickets = tickets.filter(created_at__date=today)
         date_from = date_to = today.isoformat()
 
+    filtered_count = tickets.count()
+
     filters_applied = any([status, search, date_from, date_to])
     tickets = tickets.order_by("-created_at")
+    if request.GET.get("export") == "csv" and filters_applied:
+        return _write_replacement_csv(tickets)
+
     page_obj = None
     page_query = ""
     if filters_applied:
@@ -879,6 +1150,8 @@ def panel_replacements(request):
                 "date_from": date_from,
                 "date_to": date_to,
             },
+            "today_replacements_count": today_replacements_count,
+            "filtered_count": filtered_count,
         },
     )
 
@@ -944,9 +1217,14 @@ def panel_customers(request):
 def panel_reports(request):
     if not request.user.is_staff:
         return redirect("panel:panel_login")
-    # Calculate today's date and count of reports for today (unfiltered)
     today = timezone.localdate()
-    today_reports_count = Report.objects.filter(created_at__date=today).count()
+    today_reports_count = (
+        Report.objects.filter(created_at__date=today).count()
+        + Replacement.objects.filter(
+            status=ReplacementStatus.COMPLETED,
+            updated_at__date=today,
+        ).count()
+    )
 
     saved_views = _get_saved_views_for_page(request.user, SavedViewPageType.REPORTS)
     selected_view_id = (request.GET.get("view") or "").strip()
@@ -1026,6 +1304,7 @@ def panel_reports(request):
         replacement_reports = replacement_reports.filter(updated_at__date=today)
         date_from = date_to = today.isoformat()
 
+    filtered_count = service_reports.count() + replacement_reports.count()
     report_rows = _build_report_rows(service_reports, replacement_reports)
 
     filters_applied = any([service_type, engineer_id, status, search, date_from, date_to])
@@ -1085,6 +1364,8 @@ def panel_reports(request):
                 "date_from": date_from,
                 "date_to": date_to,
             },
+            "today_reports_count": today_reports_count,
+            "filtered_count": filtered_count,
         },
     )
 

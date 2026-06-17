@@ -45,6 +45,9 @@ class TicketStatus(models.TextChoices):
     ASSIGNED = 'ASSIGNED', 'Assigned'
     IN_PROGRESS = 'IN_PROGRESS', 'In Progress'
     COMPLETED = 'COMPLETED', 'Completed'
+    CANCELLED = 'CANCELLED', 'Cancelled'
+    DUPLICATE = 'DUPLICATE', 'Duplicate'
+    CUSTOMER_SOLVED = 'CUSTOMER_SOLVED', 'Problem Solved at Customer End'
 
 
 class TicketServiceType(models.TextChoices):
@@ -109,7 +112,7 @@ class Ticket(models.Model):
     location = models.CharField(max_length=120)
     issue = models.TextField()
     issue_notes = models.TextField(blank=True)
-    model = models.CharField(max_length=120, blank=True)
+    model = models.TextField(blank=True)
     serial_number = models.CharField(max_length=120, blank=True)
     mfg_date = models.DateField(null=True, blank=True)
     purchase_date = models.DateField(null=True, blank=True)
@@ -127,6 +130,23 @@ class Ticket(models.Model):
 
     def __str__(self) -> str:
         return self.ticket_id
+
+
+class TicketProduct(models.Model):
+    ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name='product_rows')
+    item = models.ForeignKey(Item, on_delete=models.PROTECT, related_name='ticket_products')
+    quantity = models.PositiveIntegerField(default=1)
+    serial_number = models.CharField(max_length=120, blank=True)
+    sort_order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ('sort_order', 'id')
+        constraints = [
+            models.UniqueConstraint(fields=('ticket', 'item'), name='unique_ticket_product_item'),
+        ]
+
+    def __str__(self) -> str:
+        return f'{self.ticket.ticket_id}: {self.item.name} x {self.quantity}'
 
 
 class ReplacementStatus(models.TextChoices):
@@ -206,7 +226,7 @@ class ReplacementLineItem(models.Model):
 
 class Report(models.Model):
     ticket = models.OneToOneField(Ticket, on_delete=models.CASCADE, related_name='report')
-    engineer = models.ForeignKey(EngineerProfile, on_delete=models.PROTECT, related_name='reports')
+    engineer = models.ForeignKey(EngineerProfile, on_delete=models.SET_NULL, null=True, blank=True, related_name='reports')
     service_provider_code = models.CharField(max_length=60)
     serial_number = models.CharField(max_length=120)
     problem_identified = models.TextField()

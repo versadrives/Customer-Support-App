@@ -53,11 +53,17 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
           final assignedCount = tickets.where((t) => t.status == TicketStatus.assigned).length;
           final inProgressCount = tickets.where((t) => t.status == TicketStatus.inProgress).length;
           final completedCount = tickets.where((t) => t.status == TicketStatus.completed).length;
+          final cancelledCount = tickets.where((t) => t.status == TicketStatus.cancelled).length;
+          final duplicateCount = tickets.where((t) => t.status == TicketStatus.duplicate).length;
+          final customerSolvedCount = tickets.where((t) => t.status == TicketStatus.customerSolved).length;
           final total = tickets.isEmpty ? 1 : tickets.length;
           final openPct = openCount / total;
           final assignedPct = assignedCount / total;
           final inProgressPct = inProgressCount / total;
           final completedPct = completedCount / total;
+          final cancelledPct = cancelledCount / total;
+          final duplicatePct = duplicateCount / total;
+          final customerSolvedPct = customerSolvedCount / total;
 
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -76,6 +82,9 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
                   MetricCard(title: 'Assigned', value: assignedCount.toString(), color: const Color(0xFF247BA0), icon: Icons.person_add_alt_1),
                   MetricCard(title: 'In Progress', value: inProgressCount.toString(), color: const Color(0xFF118AB2), icon: Icons.autorenew),
                   MetricCard(title: 'Completed', value: completedCount.toString(), color: const Color(0xFF2A9D8F), icon: Icons.task_alt),
+                  MetricCard(title: 'Cancelled', value: cancelledCount.toString(), color: const Color(0xFFB42318), icon: Icons.cancel_outlined),
+                  MetricCard(title: 'Duplicate', value: duplicateCount.toString(), color: const Color(0xFF64748B), icon: Icons.copy_all_outlined),
+                  MetricCard(title: 'Customer Solved', value: customerSolvedCount.toString(), color: const Color(0xFF0F766E), icon: Icons.check_circle_outline),
                 ],
               ),
               const SizedBox(height: 14),
@@ -86,6 +95,9 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
                   _ChartRow('Assigned', assignedCount, assignedPct, const Color(0xFF247BA0)),
                   _ChartRow('In Progress', inProgressCount, inProgressPct, const Color(0xFF118AB2)),
                   _ChartRow('Completed', completedCount, completedPct, const Color(0xFF2A9D8F)),
+                  _ChartRow('Cancelled', cancelledCount, cancelledPct, const Color(0xFFB42318)),
+                  _ChartRow('Duplicate', duplicateCount, duplicatePct, const Color(0xFF64748B)),
+                  _ChartRow('Customer Solved', customerSolvedCount, customerSolvedPct, const Color(0xFF0F766E)),
                 ],
               ),
               const SizedBox(height: 14),
@@ -140,7 +152,7 @@ class _StatusBarRow extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         children: [
-          SizedBox(width: 90, child: Text(row.label)),
+          SizedBox(width: 118, child: Text(row.label)),
           Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8),

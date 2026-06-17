@@ -2,9 +2,23 @@
 
 {% block content %}
   <div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;">
-      <strong>Reports</strong>
-      <a class="btn primary" href="/panel/reports/">Refresh</a>
+    <div class="page-head">
+      <div class="page-head-main">
+        <div class="page-head-title">Reports</div>
+        <div class="result-summary">
+          <div class="result-chip">
+            <span class="result-chip-label">Today</span>
+            <span class="result-chip-value">{{ today_reports_count }}</span>
+          </div>
+          <div class="result-chip">
+            <span class="result-chip-label">Showing</span>
+            <span class="result-chip-value">{{ filtered_count }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="page-head-actions">
+        <a class="btn primary" href="/panel/reports/">Refresh</a>
+      </div>
     </div>
     {% if active_saved_view %}
       <div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 12px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fbff;">
@@ -32,9 +46,13 @@
             <label>Status</label>
             <select name="status">
               <option value="">All</option>
+              <option value="OPEN" {% if filters.status == "OPEN" %}selected{% endif %}>Open</option>
               <option value="ASSIGNED" {% if filters.status == "ASSIGNED" %}selected{% endif %}>Assigned</option>
               <option value="IN_PROGRESS" {% if filters.status == "IN_PROGRESS" %}selected{% endif %}>In Progress</option>
               <option value="COMPLETED" {% if filters.status == "COMPLETED" %}selected{% endif %}>Completed</option>
+              <option value="CANCELLED" {% if filters.status == "CANCELLED" %}selected{% endif %}>Cancelled</option>
+              <option value="DUPLICATE" {% if filters.status == "DUPLICATE" %}selected{% endif %}>Duplicate</option>
+              <option value="CUSTOMER_SOLVED" {% if filters.status == "CUSTOMER_SOLVED" %}selected{% endif %}>Problem Solved at Customer End</option>
             </select>
           </div>
           <div>

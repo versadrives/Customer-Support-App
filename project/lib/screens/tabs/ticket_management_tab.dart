@@ -183,6 +183,9 @@ class TicketManagementTabState extends State<TicketManagementTab> {
                 DropdownMenuItem(value: TicketStatus.assigned, child: Text('Assigned')),
                 DropdownMenuItem(value: TicketStatus.inProgress, child: Text('In Progress')),
                 DropdownMenuItem(value: TicketStatus.completed, child: Text('Completed')),
+                DropdownMenuItem(value: TicketStatus.cancelled, child: Text('Cancelled')),
+                DropdownMenuItem(value: TicketStatus.duplicate, child: Text('Duplicate')),
+                DropdownMenuItem(value: TicketStatus.customerSolved, child: Text('Problem Solved at Customer End')),
               ],
             ),
           ],
@@ -306,4 +309,3 @@ class TicketManagementTabState extends State<TicketManagementTab> {
     );
   }
 }
-

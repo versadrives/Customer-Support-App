@@ -2,12 +2,23 @@
 
 {% block content %}
   <div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;">
-      <strong>Tickets</strong>
-      <div style="font-size:0.9em;color:#666;min-width:200px;">
-        Today: {{ today_tickets_count }} | Filtered: {{ filtered_count }}
+    <div class="page-head">
+      <div class="page-head-main">
+        <div class="page-head-title">Tickets</div>
+        <div class="result-summary">
+          <div class="result-chip">
+            <span class="result-chip-label">Today</span>
+            <span class="result-chip-value">{{ today_tickets_count }}</span>
+          </div>
+          <div class="result-chip">
+            <span class="result-chip-label">Showing</span>
+            <span class="result-chip-value">{{ filtered_count }}</span>
+          </div>
+        </div>
       </div>
-      <a class="btn primary" href="{% url 'panel:panel_ticket_create' %}">Add Ticket</a>
+      <div class="page-head-actions">
+        <a class="btn primary" href="{% url 'panel:panel_ticket_create' %}">Add Ticket</a>
+      </div>
     </div>
     {% if active_saved_view %}
       <div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 12px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fbff;">
@@ -35,9 +46,13 @@
             <label>Status</label>
             <select name="status">
               <option value="">All</option>
+              <option value="OPEN" {% if filters.status == "OPEN" %}selected{% endif %}>Open</option>
               <option value="ASSIGNED" {% if filters.status == "ASSIGNED" %}selected{% endif %}>Assigned</option>
               <option value="IN_PROGRESS" {% if filters.status == "IN_PROGRESS" %}selected{% endif %}>In Progress</option>
               <option value="COMPLETED" {% if filters.status == "COMPLETED" %}selected{% endif %}>Completed</option>
+              <option value="CANCELLED" {% if filters.status == "CANCELLED" %}selected{% endif %}>Cancelled</option>
+              <option value="DUPLICATE" {% if filters.status == "DUPLICATE" %}selected{% endif %}>Duplicate</option>
+              <option value="CUSTOMER_SOLVED" {% if filters.status == "CUSTOMER_SOLVED" %}selected{% endif %}>Problem Solved at Customer End</option>
             </select>
           </div>
           <div>
@@ -68,6 +83,7 @@
         </div>
         <div class="actions">
           <button class="btn primary" type="submit">Apply Filters</button>
+          <button class="btn" type="submit" name="export" value="csv" id="export-csv" disabled>Export Excel (CSV)</button>
           {% if PANEL_SHOW_LISTS %}
             <a class="btn" href="{% url 'panel:panel_lists' %}{% if active_saved_view %}?view={{ active_saved_view.id }}{% endif %}">Lists</a>
           {% endif %}
@@ -107,10 +123,14 @@
               {% if "location" in visible_columns %}<td>{{ t.location|default:"-" }}</td>{% endif %}
               {% if "model" in visible_columns %}<td>{{ t.model|default:"-" }}</td>{% endif %}
               {% if "purchase_date" in visible_columns %}<td>{{ t.purchase_date|date:"Y-m-d"|default:"-" }}</td>{% endif %}
-              {% if "status" in visible_columns %}<td>{% if t.service_type == "REPLACEMENT" %}Replacement{% else %}{{ t.status }}{% endif %}</td>{% endif %}
+              {% if "status" in visible_columns %}<td>{{ t.get_status_display }}</td>{% endif %}
               {% if "assigned" in visible_columns %}<td>{% if t.service_type == "REPLACEMENT" %}-{% elif t.assigned_engineer %}{{ t.assigned_engineer.display_name }}{% else %}-{% endif %}</td>{% endif %}
               {% if "created" in visible_columns %}<td>{{ t.created_at|date:"Y-m-d H:i" }}</td>{% endif %}
-              <td><a class="btn" href="{% url 'panel:panel_ticket_edit' t.id %}">Update</a></td>
+              <td>
+                <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                  <a class="btn" href="{% url 'panel:panel_ticket_edit' t.id %}">Edit</a>
+                </div>
+              </td>
             </tr>
           {% empty %}
             <tr><td colspan="{{ empty_colspan }}" class="muted">No tickets found.</td></tr>
@@ -133,4 +153,35 @@
       </div>
     {% endif %}
   </div>
+  {% if PANEL_SHOW_FILTERS %}
+    <script>
+      (function () {
+        var form = document.querySelector(".filters");
+        var exportBtn = document.getElementById("export-csv");
+        if (!form || !exportBtn) return;
+
+        function hasFilterValue(el) {
+          if (!el) return false;
+          if (el.tagName === "SELECT") {
+            return el.value && el.value !== "";
+          }
+          return el.value && el.value.trim() !== "";
+        }
+
+        function updateExportState() {
+          var inputs = form.querySelectorAll("select[name], input[name]");
+          var enabled = false;
+          inputs.forEach(function (el) {
+            if (el.name === "export") return;
+            if (hasFilterValue(el)) enabled = true;
+          });
+          exportBtn.disabled = !enabled;
+        }
+
+        form.addEventListener("input", updateExportState);
+        form.addEventListener("change", updateExportState);
+        updateExportState();
+      })();
+    </script>
+  {% endif %}
 {% endblock %}

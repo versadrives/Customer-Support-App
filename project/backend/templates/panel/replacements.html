@@ -2,9 +2,21 @@
 
 {% block content %}
   <div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;">
-      <strong>Replacement</strong>
-      <span class="muted">Replacement tickets and challan details</span>
+    <div class="page-head">
+      <div class="page-head-main">
+        <div class="page-head-title">Replacements</div>
+        <div class="result-summary">
+          <div class="result-chip">
+            <span class="result-chip-label">Today</span>
+            <span class="result-chip-value">{{ today_replacements_count }}</span>
+          </div>
+          <div class="result-chip">
+            <span class="result-chip-label">Showing</span>
+            <span class="result-chip-value">{{ filtered_count }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="page-head-actions"></div>
     </div>
     {% if active_saved_view %}
       <div style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 12px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fbff;">
@@ -45,6 +57,7 @@
         </div>
         <div class="actions">
           <button class="btn primary" type="submit">Apply</button>
+          <button class="btn" type="submit" name="export" value="csv" id="export-csv" disabled>Export Excel (CSV)</button>
           {% if PANEL_SHOW_LISTS %}
             <a class="btn" href="{% url 'panel:panel_lists' %}?page_type=REPLACEMENTS{% if active_saved_view %}&view={{ active_saved_view.id }}{% endif %}">Lists</a>
           {% endif %}
@@ -131,4 +144,35 @@
       </div>
     {% endif %}
   </div>
+  {% if PANEL_SHOW_FILTERS %}
+    <script>
+      (function () {
+        var form = document.querySelector(".filters");
+        var exportBtn = document.getElementById("export-csv");
+        if (!form || !exportBtn) return;
+
+        function hasFilterValue(el) {
+          if (!el) return false;
+          if (el.tagName === "SELECT") {
+            return el.value && el.value !== "";
+          }
+          return el.value && el.value.trim() !== "";
+        }
+
+        function updateExportState() {
+          var inputs = form.querySelectorAll("select[name], input[name]");
+          var enabled = false;
+          inputs.forEach(function (el) {
+            if (el.name === "export") return;
+            if (hasFilterValue(el)) enabled = true;
+          });
+          exportBtn.disabled = !enabled;
+        }
+
+        form.addEventListener("input", updateExportState);
+        form.addEventListener("change", updateExportState);
+        updateExportState();
+      })();
+    </script>
+  {% endif %}
 {% endblock %}

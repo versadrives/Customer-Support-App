@@ -12,6 +12,12 @@ Color statusColor(TicketStatus status) {
       return const Color(0xFF118AB2);
     case TicketStatus.completed:
       return const Color(0xFF0E61A5);
+    case TicketStatus.cancelled:
+      return const Color(0xFFB42318);
+    case TicketStatus.duplicate:
+      return const Color(0xFF64748B);
+    case TicketStatus.customerSolved:
+      return const Color(0xFF2A9D8F);
   }
 }
 
@@ -25,6 +31,12 @@ String statusLabel(TicketStatus status) {
       return 'IN PROGRESS';
     case TicketStatus.completed:
       return 'COMPLETED';
+    case TicketStatus.cancelled:
+      return 'CANCELLED';
+    case TicketStatus.duplicate:
+      return 'DUPLICATE';
+    case TicketStatus.customerSolved:
+      return 'PROBLEM SOLVED AT CUSTOMER END';
   }
 }
 

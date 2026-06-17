@@ -9,7 +9,7 @@ from django.urls import path, reverse
 import csv
 
 from .admin_site import admin_site
-from .models import AdminProfile, Customer, EngineerProfile, IssueOption, Item, Replacement, ReplacementLineItem, Report, Ticket, TicketServiceType
+from .models import AdminProfile, Customer, EngineerProfile, IssueOption, Item, Replacement, ReplacementLineItem, Report, Ticket, TicketProduct, TicketServiceType
 
 
 def _get_client_ip(request):
@@ -476,8 +476,15 @@ class TicketAdminForm(forms.ModelForm):
         return cleaned
 
 
+class TicketProductInline(admin.TabularInline):
+    model = TicketProduct
+    extra = 0
+    fields = ('sort_order', 'item', 'quantity')
+
+
 class TicketAdmin(admin.ModelAdmin):
     form = TicketAdminForm
+    inlines = (TicketProductInline,)
     list_display = ('ticket_id', 'customer', 'service_type', 'model', 'serial_number', 'mfg_date', 'status', 'assigned_engineer', 'created_by', 'created_at')
     search_fields = ('ticket_id', 'customer__name', 'assigned_engineer__user__username')
     list_filter = ('service_type', 'status', 'assigned_engineer', 'customer', 'created_at')

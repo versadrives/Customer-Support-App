@@ -42,7 +42,7 @@
       <table class="table">
         <tbody>
           <tr><th>Log Date</th><td>{{ report.created_at|date:"Y-m-d H:i" }}</td></tr>
-          <tr><th>Attended By</th><td>{{ report.engineer.display_name }}</td></tr>
+          <tr><th>Attended By</th><td>{% if report.engineer %}{{ report.engineer.display_name }}{% else %}-{% endif %}</td></tr>
           <tr><th>Service Provider Code</th><td>{{ report.service_provider_code }}</td></tr>
           <tr><th>Serial Number</th><td>{{ report.serial_number }}</td></tr>
           <tr><th>Problem Identified</th><td>{{ report.problem_identified|capfirst }}</td></tr>

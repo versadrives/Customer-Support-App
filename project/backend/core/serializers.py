@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 
-from .models import AdminProfile, Customer, EngineerProfile, Report, Ticket, TicketServiceType
+from .models import AdminProfile, Customer, EngineerProfile, Report, Ticket, TicketProduct, TicketServiceType
 
 
 class UserSummarySerializer(serializers.ModelSerializer):
@@ -69,6 +69,14 @@ class CustomerSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class TicketProductSerializer(serializers.ModelSerializer):
+    item_name = serializers.CharField(source='item.name', read_only=True)
+
+    class Meta:
+        model = TicketProduct
+        fields = ('id', 'item', 'item_name', 'quantity', 'sort_order')
+
+
 class TicketSerializer(serializers.ModelSerializer):
     customer = serializers.PrimaryKeyRelatedField(queryset=Customer.objects.all(), required=False, allow_null=True)
     customer_name = serializers.CharField(source='customer.name', read_only=True)
@@ -76,6 +84,7 @@ class TicketSerializer(serializers.ModelSerializer):
     customer_address = serializers.CharField(source='customer.address', read_only=True)
     assigned_engineer_name = serializers.SerializerMethodField()
     created_by_name = serializers.CharField(source='created_by.username', read_only=True)
+    products = TicketProductSerializer(source='product_rows', many=True, read_only=True)
 
     class Meta:
         model = Ticket
@@ -87,6 +96,7 @@ class TicketSerializer(serializers.ModelSerializer):
             'customer_phone',
             'customer_address',
             'model',
+            'products',
             'serial_number',
             'mfg_date',
             'location',
@@ -125,7 +135,7 @@ class TicketSerializer(serializers.ModelSerializer):
 
 class ReportSerializer(serializers.ModelSerializer):
     ticket_id = serializers.CharField(source='ticket.ticket_id', read_only=True)
-    engineer_name = serializers.CharField(source='engineer.display_name', read_only=True)
+    engineer_name = serializers.SerializerMethodField()
     ticket_created_at = serializers.DateTimeField(source='ticket.created_at', read_only=True)
     ticket_started_at = serializers.DateTimeField(source='ticket.started_at', read_only=True)
     ticket_completed_at = serializers.DateTimeField(source='ticket.completed_at', read_only=True)
@@ -158,3 +168,8 @@ class ReportSerializer(serializers.ModelSerializer):
             'created_at',
         )
         read_only_fields = ('created_at',)
+
+    def get_engineer_name(self, obj):
+        if not obj.engineer:
+            return ''
+        return obj.engineer.display_name

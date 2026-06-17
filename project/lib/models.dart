@@ -1,4 +1,4 @@
-enum TicketStatus { open, assigned, inProgress, completed }
+enum TicketStatus { open, assigned, inProgress, completed, cancelled, duplicate, customerSolved }
 
 class AppTicket {
   AppTicket({
@@ -253,6 +253,12 @@ TicketStatus ticketStatusFromApi(String value) {
       return TicketStatus.inProgress;
     case 'COMPLETED':
       return TicketStatus.completed;
+    case 'CANCELLED':
+      return TicketStatus.cancelled;
+    case 'DUPLICATE':
+      return TicketStatus.duplicate;
+    case 'CUSTOMER_SOLVED':
+      return TicketStatus.customerSolved;
     default:
       return TicketStatus.open;
   }
@@ -266,6 +272,12 @@ String ticketStatusToApi(TicketStatus status) {
       return 'IN_PROGRESS';
     case TicketStatus.completed:
       return 'COMPLETED';
+    case TicketStatus.cancelled:
+      return 'CANCELLED';
+    case TicketStatus.duplicate:
+      return 'DUPLICATE';
+    case TicketStatus.customerSolved:
+      return 'CUSTOMER_SOLVED';
     case TicketStatus.open:
       return 'OPEN';
   }

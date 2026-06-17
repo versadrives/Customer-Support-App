@@ -2,8 +2,79 @@ from django import forms
 from django.contrib.auth import password_validation
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
-from .models import Customer, EngineerProfile, IssueOption, Item, Replacement, ReplacementLineItem, Ticket, TicketServiceType, TicketStatus
+from .models import Customer, EngineerProfile, IssueOption, Item, Replacement, ReplacementLineItem, Ticket, TicketProduct, TicketServiceType, TicketStatus
+
+TICKET_CLOSED_STATUSES = (
+    TicketStatus.COMPLETED,
+    TicketStatus.CANCELLED,
+    TicketStatus.DUPLICATE,
+    TicketStatus.CUSTOMER_SOLVED,
+)
+
+
+def format_ticket_products(product_rows):
+    return ", ".join(
+        f"{row.item.name} x {row.quantity}"
+        for row in product_rows
+    )
+
+
+def parse_ticket_product_rows(data):
+    product_names = data.getlist("product_item")
+    quantities = data.getlist("product_quantity")
+    serial_numbers = data.getlist("product_serial_number")
+    rows_by_name = {}
+
+    for index, raw_name in enumerate(product_names):
+        name = (raw_name or "").strip()
+        raw_quantity = quantities[index] if index < len(quantities) else ""
+        raw_serial = serial_numbers[index] if index < len(serial_numbers) else ""
+        if not name and not raw_quantity:
+            continue
+        if not name:
+            raise ValidationError("Select a product for every product row.")
+        try:
+            quantity = int(raw_quantity)
+        except (TypeError, ValueError):
+            raise ValidationError("Enter a valid quantity for every product.")
+        if quantity < 1:
+            raise ValidationError("Product quantity must be at least 1.")
+        if name not in rows_by_name:
+            rows_by_name[name] = {"quantity": 0, "serial_number": ""}
+        # Sum quantities, keep the first serial number if multiple entries for same product
+        rows_by_name[name]["quantity"] += quantity
+        if not rows_by_name[name]["serial_number"] and raw_serial.strip():
+            rows_by_name[name]["serial_number"] = raw_serial.strip()
+
+    if not rows_by_name:
+        raise ValidationError("Add at least one product.")
+
+    items_by_name = Item.objects.filter(active=True, name__in=rows_by_name.keys()).in_bulk(field_name="name")
+    missing = [name for name in rows_by_name if name not in items_by_name]
+    if missing:
+        raise ValidationError(f"Unknown product: {', '.join(missing)}.")
+
+    return [
+        {
+            "item": items_by_name[name],
+            "quantity": info["quantity"],
+            "serial_number": info["serial_number"]
+        }
+        for name, info in rows_by_name.items()
+    ]
+
+
+def save_ticket_product_rows(ticket, product_rows):
+    TicketProduct.objects.filter(ticket=ticket).delete()
+    ticket_products = [
+        TicketProduct(ticket=ticket, item=row["item"], quantity=row["quantity"], serial_number=row.get("serial_number", ""), sort_order=index)
+        for index, row in enumerate(product_rows)
+    ]
+    TicketProduct.objects.bulk_create(ticket_products)
+    ticket.model = format_ticket_products(ticket_products)
+    ticket.save(update_fields=["model"])
 
 
 class PanelLoginForm(forms.Form):
@@ -26,8 +97,6 @@ class PanelTicketForm(forms.ModelForm):
     issue_choice = forms.ChoiceField(label="Issue", required=False)
     issue_notes = forms.CharField(label="Notes", required=False, widget=forms.Textarea(attrs={"rows": 3}))
     issue_custom = forms.CharField(label="Other issue", required=False)
-    model_choice = forms.ChoiceField(label="Product", required=False)
-    model_custom = forms.CharField(label="Other product", required=False)
     new_fan_complaint = forms.ChoiceField(
         label="New fan complaint",
         required=True,
@@ -41,7 +110,6 @@ class PanelTicketForm(forms.ModelForm):
             "location",
             "service_type",
             "model",
-            "serial_number",
             "mfg_date",
             "purchase_date",
             "assigned_engineer",
@@ -61,17 +129,11 @@ class PanelTicketForm(forms.ModelForm):
         issue_choices.extend((option.name, option.name) for option in IssueOption.objects.filter(active=True))
         issue_choices.append(("__other__", "Other"))
         self.fields["issue_choice"].choices = issue_choices
-        model_choices = [("", "Select product")]
-        model_choices.extend((item.name, item.name) for item in Item.objects.filter(active=True))
-        model_choices.append(("__other__", "Other"))
-        self.fields["model_choice"].choices = model_choices
 
     def clean(self):
         cleaned_data = super().clean()
         issue_choice = (cleaned_data.get("issue_choice") or "").strip()
         issue_custom = _capfirst(cleaned_data.get("issue_custom", ""))
-        model_choice = (cleaned_data.get("model_choice") or "").strip()
-        model_custom = _capfirst(cleaned_data.get("model_custom", ""))
         service_type = cleaned_data.get("service_type")
         assigned_engineer = cleaned_data.get("assigned_engineer")
         new_fan_complaint = cleaned_data.get("new_fan_complaint")
@@ -86,17 +148,6 @@ class PanelTicketForm(forms.ModelForm):
             cleaned_data["resolved_issue"] = issue_custom
         else:
             self.add_error("issue_choice", "Select an issue or enter a custom one.")
-
-        if model_choice == "__other__":
-            if not model_custom:
-                self.add_error("model_choice", "Add the product using Add Product.")
-            cleaned_data["resolved_model"] = model_custom
-        elif model_choice:
-            cleaned_data["resolved_model"] = model_choice
-        elif model_custom:
-            cleaned_data["resolved_model"] = model_custom
-        else:
-            self.add_error("model_choice", "Select a product or enter a custom one.")
 
         if service_type == TicketServiceType.REPLACEMENT and assigned_engineer:
             self.add_error("assigned_engineer", "Replacement tickets cannot be assigned to an engineer.")
@@ -120,8 +171,6 @@ class PanelTicketForm(forms.ModelForm):
         self.instance.location = _capfirst(self.cleaned_data.get("location", ""))
         self.instance.issue = self.cleaned_data.get("resolved_issue", "")
         self.instance.issue_notes = _capfirst(self.cleaned_data.get("issue_notes", ""))
-        self.instance.model = self.cleaned_data.get("resolved_model", "")
-        self.instance.serial_number = _capfirst(self.cleaned_data.get("serial_number", ""))
         self.instance.purchase_date = self.cleaned_data.get("purchase_date")
         self.instance.new_fan_complaint = self.cleaned_data.get("new_fan_complaint") == "yes"
         self.instance.repeated_complaint_count = None if self.instance.new_fan_complaint else self.cleaned_data.get("repeated_complaint_count")
@@ -135,33 +184,148 @@ class PanelTicketForm(forms.ModelForm):
             self.instance.status = TicketStatus.OPEN
         return super().save(commit=commit)
 
+    def save_product_serial_numbers(self):
+        """Save serial numbers for each product."""
+        # Extract product serial numbers from form data
+        product_serials = self.extract_product_serials(self.data if self.is_bound else {})
+
+        # Update each product's serial number
+        for product in self.instance.product_rows.all():
+            # For existing tickets, try to match by item name
+            # For new tickets, we'll match by position in the posted data
+            serial_number = ""
+            if self.is_bound and self.instance.pk:
+                # Existing ticket - match by item name
+                product_names = self.data.getlist("product_item")
+                posted_serials = self.data.getlist("product_serial_number")
+                for index, name in enumerate(product_names):
+                    if index < len(posted_serials) and name.strip() == product.item.name:
+                        serial_number = posted_serials[index].strip()
+                        break
+            else:
+                # New ticket or when we can't match by name, use positional matching
+                # This is less reliable but works for simple cases
+                product_names = self.data.getlist("product_item")
+                posted_serials = self.data.getlist("product_serial_number")
+                # Find the position of this product in the list
+                try:
+                    product_names_list = list(self.instance.product_rows.values_list('item__name', flat=True))
+                    index = product_names_list.index(product.item.name)
+                    if index < len(posted_serials):
+                        serial_number = posted_serials[index].strip()
+                except (ValueError, IndexError):
+                    # If we can't find it, leave serial_number empty
+                    pass
+
+            if product.serial_number != serial_number:
+                product.serial_number = serial_number
+                product.save(update_fields=["serial_number"])
+
 
 class PanelTicketStatusForm(forms.ModelForm):
+    report_problem_identified = forms.CharField(label="Problem identified", required=False, widget=forms.Textarea(attrs={"rows": 3}))
+    report_action_taken = forms.CharField(label="Action taken", required=False, widget=forms.Textarea(attrs={"rows": 3}))
+    report_pcb_board_number = forms.CharField(label="PCB board number", required=False)
+    report_comments = forms.CharField(label="Comments", required=False, widget=forms.Textarea(attrs={"rows": 3}))
+    report_charges_collected = forms.DecimalField(label="Charges collected", required=False, min_value=0, decimal_places=2, max_digits=10)
+    report_kms_driven = forms.IntegerField(label="KM's driven", required=False, min_value=0)
+    report_is_customer_polite = forms.BooleanField(label="Customer polite", required=False)
+    report_difficult_to_attend = forms.BooleanField(label="Difficult to attend", required=False)
+    serial_number = forms.CharField(label="Serial Number", required=False)
+
     class Meta:
         model = Ticket
-        fields = ("service_type", "assigned_engineer")
+        fields = (
+            "assigned_engineer",
+            "status",
+            "serial_number",
+        )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["assigned_engineer"].queryset = EngineerProfile.objects.select_related("user").filter(active=True).order_by("user__username")
+        self.fields["assigned_engineer"].required = False
+        # Set initial values for report fields from existing report
+        try:
+            report = self.instance.report
+        except Exception:
+            report = None
+        if report:
+            self.fields["report_problem_identified"].initial = report.problem_identified
+            self.fields["report_action_taken"].initial = report.action_taken
+            self.fields["report_pcb_board_number"].initial = report.pcb_board_number
+            self.fields["report_comments"].initial = report.comments
+            self.fields["report_charges_collected"].initial = report.charges_collected
+            self.fields["report_kms_driven"].initial = report.kms_driven
+            self.fields["report_is_customer_polite"].initial = report.is_customer_polite
+            self.fields["report_difficult_to_attend"].initial = report.difficult_to_attend
+        # Set initial serial_number from instance
+        initial_serial = getattr(self.instance, "serial_number", "")
+        if not initial_serial and self.instance and self.instance.product_rows.count() == 1:
+            initial_serial = self.instance.product_rows.first().serial_number
+        self.fields["serial_number"].initial = initial_serial or ""
 
     def clean(self):
         cleaned_data = super().clean()
-        service_type = cleaned_data.get("service_type")
-        assigned_engineer = cleaned_data.get("assigned_engineer")
+        # Get values from cleaned_data or instance if not in cleaned_data
+        service_type = cleaned_data.get("service_type") or getattr(self.instance, "service_type", None)
+        status = cleaned_data.get("status") or getattr(self.instance, "status", None)
+        assigned_engineer = cleaned_data.get("assigned_engineer") or getattr(self.instance, "assigned_engineer", None)
+        serial_number = (cleaned_data.get("serial_number") or getattr(self.instance, "serial_number", "") or "").strip()
+        report_problem_identified = (cleaned_data.get("report_problem_identified") or "").strip()
+
+        # Import here to avoid circular imports
+        from .models import TicketServiceType, TicketStatus
+
         if service_type == TicketServiceType.REPLACEMENT and assigned_engineer:
             self.add_error("assigned_engineer", "Replacement tickets cannot be assigned to an engineer.")
+        if status in (TicketStatus.ASSIGNED, TicketStatus.IN_PROGRESS) and not assigned_engineer and service_type != TicketServiceType.REPLACEMENT:
+            self.add_error("assigned_engineer", "Assign an engineer before using this status.")
+        if status == TicketStatus.COMPLETED and service_type != TicketServiceType.REPLACEMENT:
+            product_rows = self.instance.product_rows.all()
+            if not product_rows.exists():
+                if not serial_number:
+                    self.add_error("serial_number", "Serial number is required to complete a ticket.")
+            else:
+                posted_serials = self.data.getlist("product_serial_number")
+                if not posted_serials or any(not s.strip() for s in posted_serials):
+                    self.add_error(None, "All product serial numbers are required to complete a ticket.")
+            if not report_problem_identified:
+                self.add_error("report_problem_identified", "Problem identified is required to complete a ticket.")
         return cleaned_data
 
     def save(self, commit=True):
+        # Get the instance
         instance = super().save(commit=False)
+
+        # Import here to avoid circular imports
+        from .models import TicketServiceType, TicketStatus
+        from django.utils import timezone
+
+        # Handle service_type == REPLACEMENT logic
         if instance.service_type == TicketServiceType.REPLACEMENT:
-            instance.assigned_engineer = None
-        # Auto-set to ASSIGNED if an engineer is selected and status is still OPEN.
-        if instance.assigned_engineer and instance.status == TicketStatus.OPEN:
-            instance.status = TicketStatus.ASSIGNED
-        elif not instance.assigned_engineer and instance.status == TicketStatus.ASSIGNED:
-            instance.status = TicketStatus.OPEN
+            if instance.assigned_engineer:
+                self.add_error("assigned_engineer", "Replacement tickets cannot be assigned to an engineer.")
+                # Don't proceed with saving if there's an error
+                if commit:
+                    return None
+                else:
+                    return instance
+            # If it's a replacement ticket and status is ASSIGNED or IN_PROGRESS, set to OPEN
+            if instance.status in (TicketStatus.ASSIGNED, TicketStatus.IN_PROGRESS):
+                instance.status = TicketStatus.OPEN
+
+        # Set timestamp fields based on status changes
+        # assigned_at: set when status changes to ASSIGNED and not already set
+        if instance.status == TicketStatus.ASSIGNED and not instance.assigned_at:
+            instance.assigned_at = timezone.now()
+        # started_at: set when status changes to IN_PROGRESS and not already set
+        if instance.status == TicketStatus.IN_PROGRESS and not instance.started_at:
+            instance.started_at = timezone.now()
+        # completed_at: set when status changes to a closed status and not already set
+        if instance.status in TICKET_CLOSED_STATUSES and not instance.completed_at:
+            instance.completed_at = timezone.now()
+
         if commit:
             instance.save()
         return instance
